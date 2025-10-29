@@ -1,5 +1,16 @@
 import { useState, useEffect } from "react"
-import { fetchTemplates, generate, downloadReportWord, downloadReportPDF, type Template, type GenerateResponse } from "./lib/api"
+import {
+  fetchTemplates,
+  generate,
+  downloadReportWord,
+  downloadReportPDF,
+  generateSummary,
+  validateReport,
+  type Template,
+  type GenerateResponse,
+  type SummaryResult,
+  type ValidationResult
+} from "./lib/api"
 
 export default function App() {
   const [templates, setTemplates] = useState<Template[]>([])
@@ -9,6 +20,11 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
+
+  // AI Analysis state
+  const [summary, setSummary] = useState<SummaryResult | null>(null)
+  const [validation, setValidation] = useState<ValidationResult | null>(null)
+  const [analysisLoading, setAnalysisLoading] = useState(false)
 
   // Metadata fields
   const [patientName, setPatientName] = useState("")
@@ -55,6 +71,36 @@ export default function App() {
     setInputText("")
     setResult(null)
     setError(null)
+    setSummary(null)
+    setValidation(null)
+  }
+
+  const handleGenerateSummary = async () => {
+    if (!result?.report_id) return
+
+    setAnalysisLoading(true)
+    try {
+      const summaryResult = await generateSummary(result.report_id)
+      setSummary(summaryResult)
+    } catch (err: any) {
+      alert(`Failed to generate summary: ${err.message}`)
+    } finally {
+      setAnalysisLoading(false)
+    }
+  }
+
+  const handleValidateReport = async () => {
+    if (!result?.report_id) return
+
+    setAnalysisLoading(true)
+    try {
+      const validationResult = await validateReport(result.report_id)
+      setValidation(validationResult)
+    } catch (err: any) {
+      alert(`Failed to validate report: ${err.message}`)
+    } finally {
+      setAnalysisLoading(false)
+    }
   }
 
   const handleDownloadWord = async (highlight: boolean = false) => {
@@ -304,6 +350,108 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                     <p className="help-text" style={{ marginTop: '0.5rem', color: '#e53e3e' }}>
                       Report ID not available. Cannot download formatted documents.
                     </p>
+                  )}
+                </div>
+
+                {/* AI Analysis Section */}
+                <div className="ai-analysis-section">
+                  <h3 className="analysis-title">AI Analysis Tools</h3>
+
+                  <div className="button-group">
+                    <button
+                      className="btn btn-analysis"
+                      onClick={handleGenerateSummary}
+                      disabled={analysisLoading || !result.report_id}
+                      title="Generate a concise AI-powered summary of the report"
+                    >
+                      {analysisLoading ? "Analyzing..." : "Generate Summary"}
+                    </button>
+                    <button
+                      className="btn btn-validate"
+                      onClick={handleValidateReport}
+                      disabled={analysisLoading || !result.report_id}
+                      title="Check for inconsistencies and errors in the report"
+                    >
+                      {analysisLoading ? "Validating..." : "Validate Report"}
+                    </button>
+                  </div>
+
+                  {/* Summary Results */}
+                  {summary && (
+                    <div className="summary-result">
+                      <h4 className="result-title">
+                        <span className="icon">📝</span> AI-Generated Summary
+                      </h4>
+                      <div className="summary-content">
+                        <p className="summary-text">{summary.summary}</p>
+                        {summary.key_findings && summary.key_findings.length > 0 && (
+                          <div className="key-findings">
+                            <strong>Key Findings:</strong>
+                            <ul>
+                              {summary.key_findings.map((finding, idx) => (
+                                <li key={idx}>{finding}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Validation Results */}
+                  {validation && (
+                    <div className={`validation-result ${validation.status}`}>
+                      <h4 className="result-title">
+                        <span className="icon">
+                          {validation.status === 'passed' ? '✅' : validation.status === 'warnings' ? '⚠️' : '❌'}
+                        </span>
+                        Validation Results
+                        <span className={`validation-badge ${validation.status}`}>
+                          {validation.status.toUpperCase()}
+                        </span>
+                      </h4>
+
+                      <div className="validation-content">
+                        {validation.errors && validation.errors.length > 0 && (
+                          <div className="validation-errors">
+                            <strong className="error-title">🚨 Errors:</strong>
+                            <ul>
+                              {validation.errors.map((error, idx) => (
+                                <li key={idx} className="error-item">{error}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {validation.warnings && validation.warnings.length > 0 && (
+                          <div className="validation-warnings">
+                            <strong className="warning-title">⚠️ Warnings:</strong>
+                            <ul>
+                              {validation.warnings.map((warning, idx) => (
+                                <li key={idx} className="warning-item">{warning}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {validation.details && validation.details.length > 0 && (
+                          <details className="validation-details-section">
+                            <summary>View Details</summary>
+                            <ul>
+                              {validation.details.map((detail, idx) => (
+                                <li key={idx}>{detail}</li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+
+                        {validation.status === 'passed' && (
+                          <p className="validation-success">
+                            ✓ No issues found. Report appears consistent and complete.
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -689,6 +837,186 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
         .btn-download-pdf:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(245, 101, 101, 0.4);
+        }
+
+        /* AI Analysis Section Styles */
+        .ai-analysis-section {
+          margin-top: 1.5rem;
+          padding: 1.5rem;
+          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+          border-radius: 8px;
+          border: 2px solid #bae6fd;
+        }
+
+        .analysis-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #0c4a6e;
+          margin-bottom: 1rem;
+        }
+
+        .btn-analysis {
+          background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+          color: white;
+        }
+
+        .btn-analysis:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+        }
+
+        .btn-validate {
+          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+          color: white;
+        }
+
+        .btn-validate:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .summary-result, .validation-result {
+          margin-top: 1rem;
+          padding: 1.25rem;
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #1e293b;
+          margin-bottom: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .result-title .icon {
+          font-size: 1.2rem;
+        }
+
+        .summary-text {
+          line-height: 1.6;
+          color: #475569;
+          margin-bottom: 1rem;
+        }
+
+        .key-findings {
+          background: #f8fafc;
+          padding: 1rem;
+          border-radius: 6px;
+          border-left: 3px solid #0ea5e9;
+        }
+
+        .key-findings ul {
+          margin-top: 0.5rem;
+          margin-left: 1.5rem;
+        }
+
+        .key-findings li {
+          margin-bottom: 0.5rem;
+          color: #334155;
+        }
+
+        .validation-result.passed {
+          border-left: 4px solid #22c55e;
+        }
+
+        .validation-result.warnings {
+          border-left: 4px solid #eab308;
+        }
+
+        .validation-result.errors {
+          border-left: 4px solid #ef4444;
+        }
+
+        .validation-badge {
+          font-size: 0.75rem;
+          padding: 0.25rem 0.75rem;
+          border-radius: 12px;
+          margin-left: auto;
+          font-weight: 700;
+        }
+
+        .validation-badge.passed {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .validation-badge.warnings {
+          background: #fef9c3;
+          color: #854d0e;
+        }
+
+        .validation-badge.errors {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+
+        .validation-errors, .validation-warnings {
+          margin-bottom: 1rem;
+        }
+
+        .error-title, .warning-title {
+          display: block;
+          margin-bottom: 0.5rem;
+          font-size: 0.95rem;
+        }
+
+        .validation-errors ul, .validation-warnings ul {
+          margin-left: 1.5rem;
+          margin-top: 0.5rem;
+        }
+
+        .error-item {
+          color: #dc2626;
+          margin-bottom: 0.5rem;
+          line-height: 1.5;
+        }
+
+        .warning-item {
+          color: #d97706;
+          margin-bottom: 0.5rem;
+          line-height: 1.5;
+        }
+
+        .validation-details-section {
+          margin-top: 1rem;
+          padding: 0.75rem;
+          background: #f8fafc;
+          border-radius: 6px;
+        }
+
+        .validation-details-section summary {
+          cursor: pointer;
+          font-weight: 600;
+          color: #475569;
+          user-select: none;
+        }
+
+        .validation-details-section summary:hover {
+          color: #0ea5e9;
+        }
+
+        .validation-details-section ul {
+          margin-top: 0.75rem;
+          margin-left: 1.5rem;
+        }
+
+        .validation-details-section li {
+          color: #64748b;
+          margin-bottom: 0.5rem;
+          line-height: 1.5;
+        }
+
+        .validation-success {
+          padding: 1rem;
+          background: #f0fdf4;
+          border-radius: 6px;
+          color: #166534;
+          font-weight: 500;
         }
       `}</style>
     </div>

@@ -74,3 +74,57 @@ export async function downloadReportPDF(reportId: number): Promise<Blob> {
   if (!res.ok) throw new Error(await res.text())
   return res.blob()
 }
+
+// AI Analysis interfaces
+export interface SummaryResult {
+  status: string
+  report_id: number
+  summary: string
+  key_findings: string[]
+}
+
+export interface ValidationResult {
+  status: 'passed' | 'warnings' | 'errors'
+  report_id: number
+  is_consistent: boolean
+  severity: string
+  errors: string[]
+  warnings: string[]
+  details: string[]
+}
+
+export interface AnalysisResult {
+  report_id: number
+  summary: {
+    text: string | null
+    key_findings: string[] | null
+  }
+  validation: {
+    status: string | null
+    errors: string[]
+    warnings: string[]
+    details: string[]
+  }
+}
+
+// AI Analysis functions
+export async function generateSummary(reportId: number, maxLength: number = 200): Promise<SummaryResult> {
+  const url = `${base}/reports/${reportId}/generate-summary?max_length=${maxLength}`
+  const res = await fetch(url, { method: 'POST' })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function validateReport(reportId: number): Promise<ValidationResult> {
+  const url = `${base}/reports/${reportId}/validate`
+  const res = await fetch(url, { method: 'POST' })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function getReportAnalysis(reportId: number): Promise<AnalysisResult> {
+  const url = `${base}/reports/${reportId}/analysis`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}

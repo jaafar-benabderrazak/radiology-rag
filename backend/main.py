@@ -18,6 +18,7 @@ from models import Template, Report
 from cache_service import cache
 from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
+from ai_analysis_service import ai_analysis_service
 
 # Configure Gemini
 if not settings.GEMINI_API_KEY:
@@ -449,6 +450,133 @@ async def download_report_pdf(
     except Exception as e:
         print(f"Error generating PDF: {e}")
         raise HTTPException(status_code=500, detail=f"Error generating PDF: {str(e)}")
+
+@app.post("/reports/{report_id}/generate-summary")
+async def generate_report_summary(
+    report_id: int,
+    max_length: int = 200,
+    db: Session = Depends(get_db)
+):
+    """
+    Generate an AI-powered concise summary/impression from a report
+
+    Args:
+        report_id: The report ID
+        max_length: Maximum length of summary in words (default: 200)
+    """
+    # Get report from database
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    try:
+        # Generate summary using AI service
+        result = ai_analysis_service.generate_summary(
+            report.generated_report,
+            max_length=max_length
+        )
+
+        # Update report with summary
+        report.ai_summary = result['summary']
+        report.key_findings = result['key_findings']
+        db.commit()
+
+        return {
+            "status": "success",
+            "report_id": report_id,
+            "summary": result['summary'],
+            "key_findings": result['key_findings']
+        }
+
+    except Exception as e:
+        print(f"Error generating summary: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating summary: {str(e)}")
+
+@app.post("/reports/{report_id}/validate")
+async def validate_report(
+    report_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Validate a report for inconsistencies and errors
+
+    Checks for:
+    - Contradictions between findings and impression
+    - Logical inconsistencies
+    - Missing critical information
+    - Unfilled placeholders
+
+    Args:
+        report_id: The report ID
+    """
+    # Get report from database
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    try:
+        # Validate using AI service
+        validation_result = ai_analysis_service.detect_inconsistencies(
+            report.generated_report
+        )
+
+        # Determine status
+        if validation_result['errors']:
+            status = 'errors'
+        elif validation_result['warnings']:
+            status = 'warnings'
+        else:
+            status = 'passed'
+
+        # Update report with validation results
+        report.validation_status = status
+        report.validation_errors = validation_result['errors']
+        report.validation_warnings = validation_result['warnings']
+        report.validation_details = validation_result['details']
+        db.commit()
+
+        return {
+            "status": status,
+            "report_id": report_id,
+            "is_consistent": validation_result['is_consistent'],
+            "severity": validation_result['severity'],
+            "errors": validation_result['errors'],
+            "warnings": validation_result['warnings'],
+            "details": validation_result['details']
+        }
+
+    except Exception as e:
+        print(f"Error validating report: {e}")
+        raise HTTPException(status_code=500, detail=f"Error validating report: {str(e)}")
+
+@app.get("/reports/{report_id}/analysis")
+async def get_report_analysis(
+    report_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get the stored AI analysis (summary and validation) for a report
+
+    Args:
+        report_id: The report ID
+    """
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    return {
+        "report_id": report_id,
+        "summary": {
+            "text": report.ai_summary,
+            "key_findings": report.key_findings
+        },
+        "validation": {
+            "status": report.validation_status,
+            "errors": report.validation_errors or [],
+            "warnings": report.validation_warnings or [],
+            "details": report.validation_details or []
+        }
+    }
 
 @app.post("/cache/clear")
 async def clear_cache():

@@ -33,7 +33,17 @@ class Report(Base):
     indication = Column(Text, nullable=False)  # Original input text
     generated_report = Column(Text, nullable=False)
     study_datetime = Column(String(100), nullable=True)
+
+    # AI Analysis fields
+    ai_summary = Column(Text, nullable=True)  # AI-generated concise summary
+    key_findings = Column(JSON, nullable=True)  # List of key findings
+    validation_status = Column(String(20), nullable=True)  # 'passed', 'warnings', 'errors'
+    validation_errors = Column(JSON, nullable=True)  # List of errors
+    validation_warnings = Column(JSON, nullable=True)  # List of warnings
+    validation_details = Column(JSON, nullable=True)  # Additional validation info
+
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationship to template
     template = relationship("Template", back_populates="reports")
