@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { fetchTemplates, generate, type Template, type GenerateResponse } from "./lib/api"
+import { fetchTemplates, generate, downloadReportWord, downloadReportPDF, type Template, type GenerateResponse } from "./lib/api"
 
 export default function App() {
   const [templates, setTemplates] = useState<Template[]>([])
@@ -8,6 +8,7 @@ export default function App() {
   const [result, setResult] = useState<GenerateResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState(false)
 
   // Metadata fields
   const [patientName, setPatientName] = useState("")
@@ -54,6 +55,45 @@ export default function App() {
     setInputText("")
     setResult(null)
     setError(null)
+  }
+
+  const handleDownloadWord = async (highlight: boolean = false) => {
+    if (!result?.report_id) return
+
+    setDownloading(true)
+    try {
+      const blob = await downloadReportWord(result.report_id, highlight)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const suffix = highlight ? '_highlighted' : ''
+      a.download = `report_${accession}${suffix}.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(`Failed to download Word document: ${err.message}`)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  const handleDownloadPDF = async () => {
+    if (!result?.report_id) return
+
+    setDownloading(true)
+    try {
+      const blob = await downloadReportPDF(result.report_id)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `report_${accession}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(`Failed to download PDF: ${err.message}`)
+    } finally {
+      setDownloading(false)
+    }
   }
 
   return (
@@ -230,20 +270,41 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                   >
                     Copy to Clipboard
                   </button>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      const blob = new Blob([result.report], { type: 'text/plain' })
-                      const url = URL.createObjectURL(blob)
-                      const a = document.createElement('a')
-                      a.href = url
-                      a.download = `report_${accession}_${Date.now()}.txt`
-                      a.click()
-                      URL.revokeObjectURL(url)
-                    }}
-                  >
-                    Download Report
-                  </button>
+                </div>
+
+                <div className="download-section">
+                  <h3 className="download-title">Download Options</h3>
+                  <div className="button-group">
+                    <button
+                      className="btn btn-download"
+                      onClick={() => handleDownloadWord(false)}
+                      disabled={downloading || !result.report_id}
+                      title="Download as Word document with original template formatting"
+                    >
+                      {downloading ? "Downloading..." : "Word (.docx)"}
+                    </button>
+                    <button
+                      className="btn btn-download-highlight"
+                      onClick={() => handleDownloadWord(true)}
+                      disabled={downloading || !result.report_id}
+                      title="Download as Word document with AI-generated content highlighted"
+                    >
+                      {downloading ? "Downloading..." : "Word (Highlighted)"}
+                    </button>
+                    <button
+                      className="btn btn-download-pdf"
+                      onClick={handleDownloadPDF}
+                      disabled={downloading || !result.report_id}
+                      title="Download as PDF document"
+                    >
+                      {downloading ? "Downloading..." : "PDF"}
+                    </button>
+                  </div>
+                  {!result.report_id && (
+                    <p className="help-text" style={{ marginTop: '0.5rem', color: '#e53e3e' }}>
+                      Report ID not available. Cannot download formatted documents.
+                    </p>
+                  )}
                 </div>
 
                 {result.similar_cases && result.similar_cases.length > 0 && (
@@ -583,6 +644,51 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
           font-size: 0.9rem;
           color: #4a5568;
           line-height: 1.5;
+        }
+
+        .download-section {
+          margin-top: 1.5rem;
+          padding: 1.5rem;
+          background: #f7fafc;
+          border-radius: 8px;
+          border: 2px dashed #cbd5e0;
+        }
+
+        .download-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #2d3748;
+          margin-bottom: 1rem;
+        }
+
+        .btn-download {
+          background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+          color: white;
+        }
+
+        .btn-download:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+
+        .btn-download-highlight {
+          background: linear-gradient(135deg, #ecc94b 0%, #d69e2e 100%);
+          color: white;
+        }
+
+        .btn-download-highlight:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(236, 201, 75, 0.4);
+        }
+
+        .btn-download-pdf {
+          background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+          color: white;
+        }
+
+        .btn-download-pdf:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(245, 101, 101, 0.4);
         }
       `}</style>
     </div>

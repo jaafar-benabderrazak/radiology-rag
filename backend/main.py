@@ -3,6 +3,7 @@ import os
 from typing import List, Optional, Literal
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -16,6 +17,7 @@ from database import get_db, Base, engine
 from models import Template, Report
 from cache_service import cache
 from vector_service import vector_service
+from document_generator import DocumentGenerator, PDFConverter
 
 # Configure Gemini
 if not settings.GEMINI_API_KEY:
@@ -74,6 +76,7 @@ class GenerateResponse(BaseModel):
     templateId: str
     highlights: List[str] = []
     similar_cases: List[dict] = []
+    report_id: Optional[int] = None  # ID of the saved report
 
 class TemplateResponse(BaseModel):
     id: int
@@ -265,6 +268,7 @@ Now generate the COMPLETE report with all placeholders filled:
             highlights.append(phrase)
 
     # Save report to database
+    report_id = None
     try:
         report = Report(
             template_id=template.id,
@@ -279,6 +283,8 @@ Now generate the COMPLETE report with all placeholders filled:
         )
         db.add(report)
         db.commit()
+        db.refresh(report)  # Get the generated ID
+        report_id = report.id
     except Exception as e:
         print(f"Error saving report: {e}")
         db.rollback()
@@ -289,7 +295,8 @@ Now generate the COMPLETE report with all placeholders filled:
         "templateTitle": template.title,
         "templateId": template.template_id,
         "highlights": list(set(highlights)),
-        "similar_cases": similar_cases
+        "similar_cases": similar_cases,
+        "report_id": report_id
     }
 
     # Cache the result
@@ -342,6 +349,106 @@ async def get_report(report_id: int, db: Session = Depends(get_db)):
         "study_datetime": report.study_datetime,
         "created_at": report.created_at
     }
+
+@app.get("/reports/{report_id}/download/word")
+async def download_report_word(
+    report_id: int,
+    highlight: bool = False,
+    db: Session = Depends(get_db)
+):
+    """
+    Download a report as Word document (.docx)
+
+    Args:
+        report_id: The report ID
+        highlight: Whether to highlight AI-generated content (default: False)
+    """
+    # Get report from database
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # Get template for formatting metadata
+    template = report.template
+
+    # Generate Word document
+    generator = DocumentGenerator()
+    try:
+        docx_stream = generator.generate_word_document(
+            report_text=report.generated_report,
+            template_skeleton=template.skeleton,
+            formatting_metadata=template.formatting_metadata,
+            highlight_ai_content=highlight
+        )
+
+        # Generate filename
+        patient_name = report.patient_name or "Patient"
+        # Clean filename (remove special characters)
+        safe_patient_name = "".join(c for c in patient_name if c.isalnum() or c in (' ', '-', '_')).strip()
+        filename = f"{safe_patient_name}_{report.accession or report_id}_Report.docx"
+
+        # Return as streaming response
+        return StreamingResponse(
+            docx_stream,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    except Exception as e:
+        print(f"Error generating Word document: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating document: {str(e)}")
+
+@app.get("/reports/{report_id}/download/pdf")
+async def download_report_pdf(
+    report_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Download a report as PDF document
+
+    Args:
+        report_id: The report ID
+    """
+    # Get report from database
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # Get template for formatting metadata
+    template = report.template
+
+    # Generate Word document first
+    generator = DocumentGenerator()
+    try:
+        docx_stream = generator.generate_word_document(
+            report_text=report.generated_report,
+            template_skeleton=template.skeleton,
+            formatting_metadata=template.formatting_metadata,
+            highlight_ai_content=False  # No highlighting in PDF
+        )
+
+        # Convert to PDF
+        converter = PDFConverter()
+        pdf_stream = converter.convert_docx_to_pdf(docx_stream)
+
+        # Generate filename
+        patient_name = report.patient_name or "Patient"
+        # Clean filename (remove special characters)
+        safe_patient_name = "".join(c for c in patient_name if c.isalnum() or c in (' ', '-', '_')).strip()
+        filename = f"{safe_patient_name}_{report.accession or report_id}_Report.pdf"
+
+        # Return as streaming response
+        return StreamingResponse(
+            pdf_stream,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    except Exception as e:
+        print(f"Error generating PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating PDF: {str(e)}")
 
 @app.post("/cache/clear")
 async def clear_cache():

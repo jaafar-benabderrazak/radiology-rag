@@ -1,8 +1,8 @@
 FROM python:3.11-slim
 
-# System deps (curl for healthcheck, and some build tools for wheels)
+# System deps (curl for healthcheck, build tools, and LibreOffice for PDF conversion)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl build-essential git && \
+    curl build-essential git libreoffice-writer libreoffice-core && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

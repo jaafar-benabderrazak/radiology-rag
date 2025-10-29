@@ -3,9 +3,12 @@ Template Loader - Automatically loads radiology templates from .docx files
 """
 import os
 import re
+import json
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from docx import Document
+from docx.text.paragraph import Paragraph
+from docx.text.run import Run
 
 
 class TemplateLoader:
@@ -46,16 +49,55 @@ class TemplateLoader:
 
         return templates
 
+    def _extract_run_formatting(self, run: Run) -> Dict[str, Any]:
+        """Extract formatting information from a run"""
+        formatting = {
+            'bold': run.bold if run.bold is not None else False,
+            'italic': run.italic if run.italic is not None else False,
+            'underline': run.underline if run.underline is not None else False,
+            'font_name': run.font.name if run.font.name else None,
+            'font_size': run.font.size.pt if run.font.size else None,
+        }
+        return formatting
+
+    def _extract_paragraph_formatting(self, para: Paragraph) -> Dict[str, Any]:
+        """Extract formatting information from a paragraph"""
+        # Get paragraph-level formatting
+        para_format = {
+            'style': para.style.name if para.style else None,
+            'alignment': str(para.alignment) if para.alignment else None,
+        }
+
+        # Extract runs with their text and formatting
+        runs_data = []
+        for run in para.runs:
+            if run.text:  # Only include non-empty runs
+                runs_data.append({
+                    'text': run.text,
+                    'formatting': self._extract_run_formatting(run)
+                })
+
+        return {
+            'paragraph_format': para_format,
+            'runs': runs_data
+        }
+
     def _load_template(self, docx_path: Path) -> Optional[Dict]:
         """Load a single template from a .docx file"""
         doc = Document(docx_path)
 
-        # Extract all text from paragraphs
+        # Extract all text from paragraphs (for text processing)
         all_text = []
+        # Store formatting metadata for each paragraph
+        paragraphs_formatting = []
+
         for para in doc.paragraphs:
             text = para.text.strip()
             if text:
                 all_text.append(text)
+                # Extract formatting for this paragraph
+                para_formatting = self._extract_paragraph_formatting(para)
+                paragraphs_formatting.append(para_formatting)
 
         if len(all_text) < 2:
             print(f"      Warning: Not enough content in {docx_path.name}")
@@ -109,13 +151,17 @@ class TemplateLoader:
         # Detect category from filename or title
         category = self._detect_category(title, docx_path.stem)
 
+        # Store the formatting metadata as JSON string for database storage
+        formatting_metadata = json.dumps(paragraphs_formatting)
+
         return {
             'template_id': template_id,
             'title': title,
             'keywords': keywords,
             'skeleton': skeleton,
             'category': category,
-            'is_active': True
+            'is_active': True,
+            'formatting_metadata': formatting_metadata
         }
 
     def _generate_template_id(self, filename: str) -> str:

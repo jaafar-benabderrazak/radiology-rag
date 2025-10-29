@@ -13,6 +13,7 @@ class Template(Base):
     skeleton = Column(Text, nullable=False)
     category = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
+    formatting_metadata = Column(Text, nullable=True)  # JSON string with formatting info
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

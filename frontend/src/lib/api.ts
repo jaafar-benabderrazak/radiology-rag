@@ -30,6 +30,7 @@ export interface GenerateResponse {
   templateId: string
   highlights: string[]
   similar_cases: any[]
+  report_id: number | null
 }
 
 export async function fetchTemplates(): Promise<Template[]> {
@@ -58,4 +59,18 @@ export async function getHealth() {
   const res = await fetch(`${base}/health`)
   if (!res.ok) throw new Error(await res.text())
   return res.json()
+}
+
+export async function downloadReportWord(reportId: number, highlight: boolean = false): Promise<Blob> {
+  const url = `${base}/reports/${reportId}/download/word${highlight ? '?highlight=true' : ''}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(await res.text())
+  return res.blob()
+}
+
+export async function downloadReportPDF(reportId: number): Promise<Blob> {
+  const url = `${base}/reports/${reportId}/download/pdf`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(await res.text())
+  return res.blob()
 }
