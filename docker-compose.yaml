@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # FastAPI Backend with RAG
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: radiology-rag-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - EMBEDDING_MODEL=all-MiniLM-L6-v2
+      - TEMPLATES_DIR=/app/templates
+      - GOOGLE_API_KEY="AIzaSyCzPWaJ2-QcviSPB8FmyvYLe_RD0zIcp9M"
+    volumes:
+      - ./backend:/app
+      - ./templates:/app/templates
+      - embeddings-cache:/app/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: radiology-rag-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_BASE=http://localhost:8000
+      - HOST=0.0.0.0
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Optional: PostgreSQL for production template storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: radiology-db
+    environment:
+      - POSTGRES_DB=radiology_templates
+      - POSTGRES_USER=radiology_user
+      - POSTGRES_PASSWORD=secure_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  # Optional: Qdrant vector database for production
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: radiology-vector-db
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant-storage:/qdrant/storage
+    restart: unless-stopped
+
+  # Optional: Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: radiology-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  qdrant-storage:
+  redis-data:
+  embeddings-cache:
+
+networks:
+  default:
+    name: radiology-network
+    driver: bridge
