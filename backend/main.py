@@ -92,11 +92,20 @@ class ReportHistoryResponse(BaseModel):
 
 # ---------- Helper Functions ----------
 SYSTEM_INSTRUCTIONS = (
-    "You are a radiology reporting assistant. "
-    "Produce a formal, concise, professional report that fits the provided skeleton exactly. "
-    "Do not include markdown, backticks, or extra commentary. "
-    "Fill placeholders with best clinical wording based on the provided indication text. "
-    "Prefer negative, precise phrasing when appropriate (e.g., 'No evidence of pulmonary embolism.')."
+    "You are a professional radiology reporting assistant. "
+    "CRITICAL: You MUST follow the provided template structure EXACTLY. "
+    "Rules:\n"
+    "1. Keep ALL sections, headers, and formatting from the template\n"
+    "2. Replace ALL placeholders like <fill>, <à remplir>, <concisely>, etc. with actual clinical findings\n"
+    "3. Fill EVERY section - do NOT leave any <placeholders> unfilled\n"
+    "4. Do NOT skip any sections from the template\n"
+    "5. Do NOT add extra sections not in the template\n"
+    "6. Use professional medical terminology appropriate for formal radiology reports\n"
+    "7. Base your findings on the clinical indication provided\n"
+    "8. Use negative findings when appropriate (e.g., 'No evidence of pulmonary embolism', 'Pas de signe de...', 'Normal')\n"
+    "9. Be concise but complete in each section\n"
+    "10. Do NOT include markdown formatting, code blocks, or backticks\n"
+    "Output ONLY the completed report with all placeholders filled."
 )
 
 def choose_template_auto(text: str, db: Session) -> Optional[Template]:
@@ -217,9 +226,21 @@ Accession/ID: {meta.accession}
             user_prompt += f"\n{i}. {case['text'][:200]}... (similarity: {case['score']:.2f})\n"
 
     user_prompt += f"""
-Using this skeleton, produce the final report (plain text only, no markdown):
+
+INSTRUCTIONS:
+You must produce a complete radiology report following the template below EXACTLY.
+- Keep the EXACT structure, sections, headers, and formatting
+- Replace ALL <fill>, <à remplir>, and similar placeholders with appropriate clinical findings
+- Base your findings on the indication text above
+- Fill EVERY section - leave NO placeholders unfilled
+- Use professional medical terminology
+- Output plain text only (no markdown, no code blocks, no backticks)
+
+TEMPLATE TO FOLLOW:
 
 {formatted_skeleton}
+
+Now generate the COMPLETE report with all placeholders filled:
 """.strip()
 
     # Call Gemini - combine system instructions with user prompt
