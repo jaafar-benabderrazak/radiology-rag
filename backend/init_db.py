@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from config import settings
 from database import Base
 from models import Template
+from template_loader import load_templates_from_files, DEFAULT_TEMPLATES
 import json
 
 def init_database():
@@ -30,116 +31,16 @@ def init_database():
             print(f"✓ Database already has {existing} templates")
             return
 
-        # Seed initial templates
-        print("Seeding initial templates...")
+        # Try to load templates from .docx files
+        print("Loading templates from files...")
+        templates_data = load_templates_from_files()
 
-        templates_data = [
-            {
-                "template_id": "ctpa_pe",
-                "title": "CT Pulmonary Angiography – Pulmonary Embolism (Formal)",
-                "keywords": ["ctpa", "pulmonary embolism", "pe", "angiography", "shortness of breath", "dyspnea", "pleuritic"],
-                "category": "CT",
-                "skeleton": """Radiology Report
-Referring Physician: {referrer}
-Reporting Radiologist: {doctor_name}
+        # If no templates found in files, use defaults
+        if not templates_data:
+            print("⚠ No template files found, using default templates")
+            templates_data = DEFAULT_TEMPLATES
 
-Patient: {patient_name}
-Study: CT Pulmonary Angiography
-Body Part: Chest
-Study Date/Time: {study_datetime}
-Accession/ID: {accession}
-
-Indication:
-{indication}
-
-Technique:
-Helical acquisition from lung apices to bases following IV contrast with bolus tracking. Multiplanar reconstructions performed. Adequate opacification of the pulmonary arteries.
-
-Findings:
-• Pulmonary arteries: <fill concisely>
-• Right heart strain: <fill concisely>
-• Lungs and pleura: <fill concisely>
-• Mediastinum: <fill concisely or Unremarkable>
-• Upper abdomen: <fill concisely or Unremarkable>
-• Incidental findings: <None or list>
-
-Comparison: <None available or describe>
-
-Impression:
-1) <main conclusion>
-2) <secondary, if applicable>
-
-Signed electronically by {doctor_name}, {study_datetime}
-"""
-            },
-            {
-                "template_id": "cxr_normal",
-                "title": "Chest X-ray – Normal (Formal)",
-                "keywords": ["cxr", "xray", "x-ray", "radiograph", "chest", "thorax", "pa", "lateral"],
-                "category": "X-Ray",
-                "skeleton": """Radiology Report
-Referring Physician: {referrer}
-Reporting Radiologist: {doctor_name}
-
-Patient: {patient_name}
-Study: Chest X-ray (PA/Lateral)
-Body Part: Chest
-Study Date/Time: {study_datetime}
-Accession/ID: {accession}
-
-Indication:
-{indication}
-
-Technique:
-Standard PA and lateral projections.
-
-Findings:
-• Cardiomediastinal silhouette within normal limits.
-• Lungs: <fill>
-• Pleura: <fill>
-• Bones: <fill>
-
-Impression:
-<one-line normal or key findings>
-
-Signed electronically by {doctor_name}, {study_datetime}
-"""
-            },
-            {
-                "template_id": "us_ruq",
-                "title": "Ultrasound – Abdomen RUQ (Formal)",
-                "keywords": ["ultrasound", "us", "ruq", "gallbladder", "cholelithiasis", "biliary"],
-                "category": "Ultrasound",
-                "skeleton": """Radiology Report
-Referring Physician: {referrer}
-Reporting Radiologist: {doctor_name}
-
-Patient: {patient_name}
-Study: Ultrasound – Abdomen (RUQ)
-Body Part: Right upper quadrant
-Study Date/Time: {study_datetime}
-Accession/ID: {accession}
-
-Indication:
-{indication}
-
-Technique:
-Real-time ultrasound with grayscale and color Doppler as appropriate.
-
-Findings:
-• Liver: <fill>
-• Gallbladder: <fill>
-• Bile ducts: <fill>
-• Pancreas: <fill>
-• Right kidney: <fill>
-
-Impression:
-<concise overall>
-
-Signed electronically by {doctor_name}, {study_datetime}
-"""
-            }
-        ]
+        print(f"Seeding {len(templates_data)} templates...")
 
         for tpl_data in templates_data:
             template = Template(**tpl_data)
@@ -148,8 +49,17 @@ Signed electronically by {doctor_name}, {study_datetime}
         db.commit()
         print(f"✓ Seeded {len(templates_data)} templates successfully")
 
+        # Print loaded templates
+        print("\nLoaded templates:")
+        for tpl in templates_data:
+            print(f"  - {tpl['template_id']}: {tpl['title']}")
+            print(f"    Keywords: {', '.join(tpl['keywords'][:5])}")
+            print(f"    Category: {tpl.get('category', 'General')}")
+
     except Exception as e:
         print(f"✗ Error initializing database: {e}")
+        import traceback
+        traceback.print_exc()
         db.rollback()
         sys.exit(1)
     finally:
