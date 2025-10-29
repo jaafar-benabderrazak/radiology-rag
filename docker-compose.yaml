@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # FastAPI Backend with RAG
   backend:
@@ -15,6 +13,7 @@ services:
       - TEMPLATES_DIR=/app/templates
       - GOOGLE_API_KEY=AIzaSyCzPWaJ2-QcviSPB8FmyvYLe_RD0zIcp9M
       - GEMINI_API_KEY=AIzaSyCzPWaJ2-QcviSPB8FmyvYLe_RD0zIcp9M
+      - GEMINI_MODEL=gemini-pro
       # Database
       - POSTGRES_USER=radiology_user
       - POSTGRES_PASSWORD=secure_password

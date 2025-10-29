@@ -14,13 +14,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy app
 COPY . /app
 
-# Make startup script executable
-RUN chmod +x /app/startup.sh
-
 # Optional: download small spaCy model at build time (uncomment if needed)
 # RUN python -m spacy download en_core_web_sm
 
 EXPOSE 8000
 
-# Use startup script
-CMD ["/app/startup.sh"]
+# Direct command to avoid Windows line ending issues with startup.sh
+CMD ["sh", "-c", "sleep 10 && python init_db.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]
