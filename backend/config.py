@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     # API Keys
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-pro")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
 
     # Cache settings
     CACHE_ENABLED: bool = os.getenv("CACHE_ENABLED", "true").lower() == "true"
