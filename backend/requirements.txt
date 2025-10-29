@@ -9,6 +9,7 @@ fastapi-cors==0.0.6
 # Data models and validation
 pydantic==2.5.0
 pydantic-settings==2.1.0
+python-dotenv==1.0.0
 
 # Embeddings and ML
 sentence-transformers==2.2.2
@@ -22,10 +23,16 @@ python-docx==1.1.0
 pypdf2==3.0.1
 mammoth==1.6.0
 
-# Vector database (optional - for production)
-# pinecone-client==2.2.4
-# weaviate-client==3.25.0
-# qdrant-client==1.6.4
+# Database support
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1
+
+# Vector database
+qdrant-client==1.7.0
+
+# Caching
+redis==5.0.1
 
 # Async support
 aiofiles==23.2.1
