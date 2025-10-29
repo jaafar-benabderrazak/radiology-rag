@@ -222,14 +222,13 @@ Using this skeleton, produce the final report (plain text only, no markdown):
 {formatted_skeleton}
 """.strip()
 
-    # Call Gemini
-    model = genai.GenerativeModel(settings.GEMINI_MODEL)
-    resp = model.generate_content(
-        [
-            {"role": "system", "parts": [SYSTEM_INSTRUCTIONS]},
-            {"role": "user", "parts": [user_prompt]},
-        ]
+    # Call Gemini - combine system instructions with user prompt
+    # Gemini doesn't support "system" role in messages
+    model = genai.GenerativeModel(
+        model_name=settings.GEMINI_MODEL,
+        system_instruction=SYSTEM_INSTRUCTIONS
     )
+    resp = model.generate_content(user_prompt)
 
     # Extract text
     report_text = (resp.text or "").strip()
