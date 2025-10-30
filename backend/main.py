@@ -258,15 +258,58 @@ Now generate the COMPLETE report with all placeholders filled:
     # Extract text
     report_text = (resp.text or "").strip()
 
-    # Generate highlights
+    # Generate highlights - extract key phrases from IMPRESSION/CONCLUSION section
     highlights: List[str] = []
-    first_line = req.input.strip().split("\n")[0]
-    if first_line:
-        highlights.append(first_line[:200])
-    for phrase in ["No evidence of pulmonary embolism", "No right heart strain",
-                   "No consolidation", "No effusion", "Unremarkable", "Normal"]:
-        if phrase.lower() in report_text.lower():
-            highlights.append(phrase)
+
+    # Find and highlight the conclusion/impression section
+    import re
+    conclusion_patterns = [
+        r'(?:IMPRESSION|CONCLUSION|SYNTHÈSE|DIAGNOSTIC)[\s:]*\n(.+?)(?=\n\n|\Z)',
+        r'(?:^|\n)(?:IMPRESSION|CONCLUSION|SYNTHÈSE)[\s:]*\n(.+?)(?=\n[A-Z]|\Z)'
+    ]
+
+    for pattern in conclusion_patterns:
+        match = re.search(pattern, report_text, re.MULTILINE | re.DOTALL | re.IGNORECASE)
+        if match:
+            conclusion_text = match.group(1).strip()
+            # Split into sentences and highlight key ones
+            sentences = [s.strip() for s in re.split(r'[.!]\s+', conclusion_text) if s.strip()]
+            for sentence in sentences[:3]:  # Highlight first 3 sentences of conclusion
+                if len(sentence) > 10:
+                    highlights.append(sentence)
+            break
+
+    # Highlight key medical findings (both positive and negative)
+    key_phrases = [
+        # Negative findings (English)
+        r"No evidence of [^.!]+",
+        r"No [^.!]+ identified",
+        r"Unremarkable [^.!]+",
+        r"Normal [^.!]+",
+        r"No significant [^.!]+",
+        # Positive findings (English)
+        r"[^.!]+ consistent with [^.!]+",
+        r"[^.!]+ suggestive of [^.!]+",
+        r"Evidence of [^.!]+",
+        r"Suspicious for [^.!]+",
+        # Negative findings (French)
+        r"Pas d[e']? [^.!]+",
+        r"Absence d[e']? [^.!]+",
+        r"Aucun[e]? [^.!]+",
+        r"Sans [^.!]+",
+        # Positive findings (French)
+        r"Compatible avec [^.!]+",
+        r"En faveur d[e']? [^.!]+",
+        r"Présence d[e']? [^.!]+",
+        r"Signes de [^.!]+"
+    ]
+
+    for phrase_pattern in key_phrases:
+        matches = re.finditer(phrase_pattern, report_text, re.IGNORECASE)
+        for match in matches:
+            phrase = match.group(0).strip()
+            if 5 < len(phrase) < 150:  # Reasonable length
+                highlights.append(phrase)
 
     # Save report to database
     report_id = None

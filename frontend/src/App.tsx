@@ -67,7 +67,10 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
     case: "Case",
     match: "match",
     emptyState: "Enter clinical information and click \"Generate Report\" to create a radiology report",
-    language: "Language"
+    language: "Language",
+    showHighlights: "Show Highlights",
+    hideHighlights: "Hide Highlights",
+    highlightsLegend: "Key findings and important phrases are highlighted"
   },
   fr: {
     title: "Générateur de Rapports Radiologiques",
@@ -119,7 +122,10 @@ Patient avec dyspnée aiguë et douleur thoracique pleurétique. D-dimères éle
     case: "Cas",
     match: "correspondance",
     emptyState: "Entrez les informations cliniques et cliquez sur \"Générer le Rapport\" pour créer un rapport radiologique",
-    language: "Langue"
+    language: "Langue",
+    showHighlights: "Afficher les Surlignages",
+    hideHighlights: "Masquer les Surlignages",
+    highlightsLegend: "Les résultats clés et phrases importantes sont surlignés"
   }
 }
 
@@ -148,6 +154,9 @@ export default function App() {
   // Voice input state
   const [isRecording, setIsRecording] = useState(false)
   const [recognition, setRecognition] = useState<any>(null)
+
+  // Highlighting state
+  const [showHighlights, setShowHighlights] = useState(true)
 
   // Metadata fields
   const [patientName, setPatientName] = useState("")
@@ -255,6 +264,80 @@ export default function App() {
     setError(null)
     setSummary(null)
     setValidation(null)
+  }
+
+  const renderHighlightedReport = (text: string, highlights: string[]) => {
+    if (!showHighlights || !highlights || highlights.length === 0) {
+      return <pre className="report-text">{text}</pre>
+    }
+
+    // Create a map of positions to highlight
+    const highlightMap: Array<{start: number, end: number, text: string}> = []
+
+    highlights.forEach(highlight => {
+      if (!highlight || highlight.length < 3) return // Skip very short highlights
+
+      // Find all occurrences of this highlight in the text (case insensitive)
+      const regex = new RegExp(highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+      let match
+      while ((match = regex.exec(text)) !== null) {
+        highlightMap.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          text: match[0]
+        })
+      }
+    })
+
+    // Sort by start position and merge overlapping highlights
+    highlightMap.sort((a, b) => a.start - b.start)
+    const merged: Array<{start: number, end: number}> = []
+    highlightMap.forEach(current => {
+      if (merged.length === 0) {
+        merged.push(current)
+      } else {
+        const last = merged[merged.length - 1]
+        if (current.start <= last.end) {
+          // Overlapping, merge them
+          last.end = Math.max(last.end, current.end)
+        } else {
+          merged.push(current)
+        }
+      }
+    })
+
+    // Build the JSX with highlighted sections
+    if (merged.length === 0) {
+      return <pre className="report-text">{text}</pre>
+    }
+
+    const elements: JSX.Element[] = []
+    let lastIndex = 0
+
+    merged.forEach((highlight, idx) => {
+      // Add text before highlight
+      if (highlight.start > lastIndex) {
+        elements.push(
+          <span key={`text-${idx}`}>{text.substring(lastIndex, highlight.start)}</span>
+        )
+      }
+      // Add highlighted text
+      elements.push(
+        <mark key={`highlight-${idx}`} className="highlight-text">
+          {text.substring(highlight.start, highlight.end)}
+        </mark>
+      )
+      lastIndex = highlight.end
+    })
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      elements.push(
+        <span key="text-end">{text.substring(lastIndex)}</span>
+      )
+    }
+
+    return <pre className="report-text">{elements}</pre>
   }
 
   const handleGenerateSummary = async () => {
@@ -542,8 +625,28 @@ export default function App() {
                   )}
                 </div>
 
+                {/* Highlight Toggle */}
+                {result.highlights && result.highlights.length > 0 && (
+                  <div className="highlight-controls">
+                    <button
+                      className={`btn-highlight-toggle ${showHighlights ? 'active' : ''}`}
+                      onClick={() => setShowHighlights(!showHighlights)}
+                      title={showHighlights ? t.hideHighlights : t.showHighlights}
+                    >
+                      <span className="highlight-icon">{showHighlights ? '🔆' : '○'}</span>
+                      {showHighlights ? t.hideHighlights : t.showHighlights}
+                    </button>
+                    {showHighlights && (
+                      <span className="highlight-legend">
+                        <span className="legend-sample"></span>
+                        {t.highlightsLegend}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <div className="report-output">
-                  <pre className="report-text">{result.report}</pre>
+                  {renderHighlightedReport(result.report, result.highlights || [])}
                 </div>
 
                 <div className="button-group">
@@ -1085,6 +1188,89 @@ export default function App() {
           line-height: 1.6;
           white-space: pre-wrap;
           color: #2d3748;
+        }
+
+        .highlight-controls {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          margin-bottom: 1rem;
+          padding: 0.75rem 1rem;
+          background: #f7fafc;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .btn-highlight-toggle {
+          padding: 0.5rem 1rem;
+          border: 2px solid #cbd5e0;
+          background: white;
+          border-radius: 6px;
+          font-size: 0.9rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: #4a5568;
+        }
+
+        .btn-highlight-toggle:hover {
+          border-color: #667eea;
+          transform: translateY(-1px);
+        }
+
+        .btn-highlight-toggle.active {
+          background: #667eea;
+          border-color: #667eea;
+          color: white;
+        }
+
+        .highlight-icon {
+          font-size: 1.1rem;
+        }
+
+        .highlight-legend {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.85rem;
+          color: #718096;
+          padding: 0.5rem 1rem;
+          background: white;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .legend-sample {
+          display: inline-block;
+          width: 24px;
+          height: 14px;
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border: 1px solid #f59e0b;
+          border-radius: 3px;
+        }
+
+        .highlight-text {
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border-bottom: 2px solid #f59e0b;
+          padding: 0.1rem 0.2rem;
+          border-radius: 3px;
+          font-weight: 500;
+          color: #78350f;
+          animation: highlight-fade-in 0.3s ease-in;
+        }
+
+        @keyframes highlight-fade-in {
+          from {
+            background: transparent;
+            border-bottom-color: transparent;
+          }
+          to {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-bottom-color: #f59e0b;
+          }
         }
 
         .empty-state {
