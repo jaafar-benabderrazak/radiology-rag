@@ -36,7 +36,9 @@ class Report(Base):
 
     # AI Analysis fields
     ai_summary = Column(Text, nullable=True)  # AI-generated concise summary
+    ai_conclusion = Column(Text, nullable=True)  # AI-generated conclusion based on indication
     key_findings = Column(JSON, nullable=True)  # List of key findings
+    report_language = Column(String(10), nullable=True)  # Detected language (en, fr, ar, etc.)
     validation_status = Column(String(20), nullable=True)  # 'passed', 'warnings', 'errors'
     validation_errors = Column(JSON, nullable=True)  # List of errors
     validation_warnings = Column(JSON, nullable=True)  # List of warnings

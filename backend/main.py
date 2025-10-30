@@ -470,22 +470,27 @@ async def generate_report_summary(
         raise HTTPException(status_code=404, detail="Report not found")
 
     try:
-        # Generate summary using AI service
+        # Generate summary using AI service with indication text
         result = ai_analysis_service.generate_summary(
             report.generated_report,
+            indication_text=report.indication,
             max_length=max_length
         )
 
-        # Update report with summary
+        # Update report with summary, conclusion, and language
         report.ai_summary = result['summary']
+        report.ai_conclusion = result.get('conclusion', '')
         report.key_findings = result['key_findings']
+        report.report_language = result.get('language', 'en')
         db.commit()
 
         return {
             "status": "success",
             "report_id": report_id,
             "summary": result['summary'],
-            "key_findings": result['key_findings']
+            "conclusion": result.get('conclusion', ''),
+            "key_findings": result['key_findings'],
+            "language": result.get('language', 'en')
         }
 
     except Exception as e:
@@ -568,7 +573,9 @@ async def get_report_analysis(
         "report_id": report_id,
         "summary": {
             "text": report.ai_summary,
-            "key_findings": report.key_findings
+            "conclusion": report.ai_conclusion,
+            "key_findings": report.key_findings,
+            "language": report.report_language
         },
         "validation": {
             "status": report.validation_status,

@@ -26,6 +26,10 @@ export default function App() {
   const [validation, setValidation] = useState<ValidationResult | null>(null)
   const [analysisLoading, setAnalysisLoading] = useState(false)
 
+  // Voice input state
+  const [isRecording, setIsRecording] = useState(false)
+  const [recognition, setRecognition] = useState<any>(null)
+
   // Metadata fields
   const [patientName, setPatientName] = useState("")
   const [doctorName, setDoctorName] = useState("Dr. John Smith")
@@ -37,6 +41,50 @@ export default function App() {
     fetchTemplates()
       .then(setTemplates)
       .catch(err => console.error("Failed to load templates:", err))
+  }, [])
+
+  // Initialize speech recognition on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+      const recognitionInstance = new SpeechRecognition()
+
+      recognitionInstance.continuous = true
+      recognitionInstance.interimResults = true
+      recognitionInstance.lang = 'en-US' // Default language, will be updated
+
+      recognitionInstance.onresult = (event: any) => {
+        let interimTranscript = ''
+        let finalTranscript = ''
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' '
+          } else {
+            interimTranscript += transcript
+          }
+        }
+
+        if (finalTranscript) {
+          setInputText(prev => prev + finalTranscript)
+        }
+      }
+
+      recognitionInstance.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error)
+        setIsRecording(false)
+        if (event.error === 'not-allowed') {
+          alert('Microphone access denied. Please allow microphone access in your browser settings.')
+        }
+      }
+
+      recognitionInstance.onend = () => {
+        setIsRecording(false)
+      }
+
+      setRecognition(recognitionInstance)
+    }
   }, [])
 
   const handleGenerate = async () => {
@@ -100,6 +148,26 @@ export default function App() {
       alert(`Failed to validate report: ${err.message}`)
     } finally {
       setAnalysisLoading(false)
+    }
+  }
+
+  const toggleVoiceInput = () => {
+    if (!recognition) {
+      alert('Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.')
+      return
+    }
+
+    if (isRecording) {
+      recognition.stop()
+      setIsRecording(false)
+    } else {
+      try {
+        recognition.start()
+        setIsRecording(true)
+      } catch (err) {
+        console.error('Error starting recognition:', err)
+        alert('Could not start voice input. Please try again.')
+      }
     }
   }
 
@@ -189,6 +257,17 @@ export default function App() {
             <div className="form-group">
               <label htmlFor="indication" className="label">
                 Clinical Indication
+                <button
+                  type="button"
+                  className={`voice-btn ${isRecording ? 'recording' : ''}`}
+                  onClick={toggleVoiceInput}
+                  title={isRecording ? "Stop recording" : "Start voice input"}
+                >
+                  {isRecording ? '🔴' : '🎤'}
+                  <span className="voice-label">
+                    {isRecording ? ' Recording...' : ' Voice Input'}
+                  </span>
+                </button>
               </label>
               <textarea
                 id="indication"
@@ -381,9 +460,23 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                     <div className="summary-result">
                       <h4 className="result-title">
                         <span className="icon">📝</span> AI-Generated Summary
+                        {summary.language && (
+                          <span className="language-badge">{summary.language.toUpperCase()}</span>
+                        )}
                       </h4>
                       <div className="summary-content">
-                        <p className="summary-text">{summary.summary}</p>
+                        <div className="summary-section">
+                          <strong className="section-label">Summary:</strong>
+                          <p className="summary-text">{summary.summary}</p>
+                        </div>
+
+                        {summary.conclusion && (
+                          <div className="conclusion-section">
+                            <strong className="section-label">Conclusion:</strong>
+                            <p className="summary-text">{summary.conclusion}</p>
+                          </div>
+                        )}
+
                         {summary.key_findings && summary.key_findings.length > 0 && (
                           <div className="key-findings">
                             <strong>Key Findings:</strong>
@@ -570,7 +663,8 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
         }
 
         .label {
-          display: block;
+          display: flex;
+          align-items: center;
           font-weight: 600;
           color: #4a5568;
           margin-bottom: 0.5rem;
@@ -583,6 +677,42 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
           color: #4a5568;
           margin-bottom: 0.25rem;
           font-size: 0.85rem;
+        }
+
+        .voice-btn {
+          margin-left: auto;
+          padding: 0.5rem 1rem;
+          border: 2px solid #667eea;
+          background: white;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          color: #667eea;
+        }
+
+        .voice-btn:hover {
+          background: #f0f4ff;
+          transform: translateY(-1px);
+        }
+
+        .voice-btn.recording {
+          background: #fee2e2;
+          border-color: #ef4444;
+          color: #dc2626;
+          animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .voice-label {
+          margin-left: 0.25rem;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
         }
 
         .select, .textarea, .input-sm {
@@ -897,10 +1027,39 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
           font-size: 1.2rem;
         }
 
+        .language-badge {
+          font-size: 0.7rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 8px;
+          background: #e0f2fe;
+          color: #0369a1;
+          font-weight: 700;
+          margin-left: auto;
+        }
+
+        .summary-section, .conclusion-section {
+          margin-bottom: 1rem;
+          padding: 1rem;
+          background: #fafafa;
+          border-radius: 6px;
+        }
+
+        .conclusion-section {
+          background: #fffbeb;
+          border-left: 3px solid #f59e0b;
+        }
+
+        .section-label {
+          display: block;
+          color: #1e293b;
+          margin-bottom: 0.5rem;
+          font-size: 0.9rem;
+        }
+
         .summary-text {
           line-height: 1.6;
           color: #475569;
-          margin-bottom: 1rem;
+          margin: 0;
         }
 
         .key-findings {

@@ -80,7 +80,9 @@ export interface SummaryResult {
   status: string
   report_id: number
   summary: string
+  conclusion: string
   key_findings: string[]
+  language: string
 }
 
 export interface ValidationResult {
@@ -97,7 +99,9 @@ export interface AnalysisResult {
   report_id: number
   summary: {
     text: string | null
+    conclusion: string | null
     key_findings: string[] | null
+    language: string | null
   }
   validation: {
     status: string | null

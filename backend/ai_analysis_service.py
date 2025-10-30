@@ -15,42 +15,116 @@ class AIAnalysisService:
         """Initialize the AI analysis service"""
         self.model_name = settings.GEMINI_MODEL
 
-    def generate_summary(self, report_text: str, max_length: int = 200) -> Dict[str, str]:
+    def _detect_language(self, text: str) -> str:
         """
-        Generate a concise summary/impression from a full radiology report
+        Detect the language of the text
+
+        Returns:
+            Language code ('fr' for French, 'en' for English, 'ar' for Arabic, etc.)
+        """
+        text_lower = text.lower()
+
+        # French indicators
+        french_keywords = ['patient', 'radiographie', 'échographie', 'scanner', 'irm',
+                          'résultats', 'conclusion', 'pas de', 'aucune', 'sans',
+                          'examen', 'réalisé', 'étude', 'la', 'le', 'les', 'des']
+        french_count = sum(1 for keyword in french_keywords if keyword in text_lower)
+
+        # English indicators
+        english_keywords = ['patient', 'radiograph', 'ultrasound', 'ct', 'mri',
+                           'findings', 'impression', 'conclusion', 'no', 'none',
+                           'examination', 'study', 'the', 'a', 'an', 'of']
+        english_count = sum(1 for keyword in english_keywords if keyword in text_lower)
+
+        # Arabic indicators
+        arabic_pattern = re.compile(r'[\u0600-\u06FF]')
+        has_arabic = bool(arabic_pattern.search(text))
+
+        if has_arabic:
+            return 'ar'
+        elif french_count > english_count:
+            return 'fr'
+        else:
+            return 'en'
+
+    def generate_summary(self, report_text: str, indication_text: str = "", max_length: int = 200) -> Dict[str, str]:
+        """
+        Generate a concise summary/impression and conclusion from a full radiology report
 
         Args:
             report_text: The full report text
+            indication_text: The original clinical indication (input)
             max_length: Maximum length of the summary in words
 
         Returns:
-            Dict with 'summary' and 'key_findings' keys
+            Dict with 'summary', 'conclusion', 'key_findings', and 'language' keys
         """
-        # Extract findings section if present
-        findings_section = self._extract_section(report_text, ["findings", "résultats", "observations"])
+        # Detect language of the report
+        detected_language = self._detect_language(report_text)
+
+        # Language-specific instructions
+        language_instructions = {
+            'fr': {
+                'name': 'French',
+                'summary_label': 'SYNTHÈSE',
+                'conclusion_label': 'CONCLUSION',
+                'example': 'Ex: "Absence d\'anomalie significative" ou "Pneumonie du lobe inférieur droit"'
+            },
+            'en': {
+                'name': 'English',
+                'summary_label': 'SUMMARY',
+                'conclusion_label': 'CONCLUSION',
+                'example': 'Ex: "No significant abnormality" or "Right lower lobe pneumonia"'
+            },
+            'ar': {
+                'name': 'Arabic',
+                'summary_label': 'الملخص',
+                'conclusion_label': 'الخلاصة',
+                'example': 'مثال: "لا توجد تشوهات كبيرة" أو "التهاب رئوي"'
+            }
+        }
+
+        lang_config = language_instructions.get(detected_language, language_instructions['en'])
 
         # Prepare prompt for summary generation
         system_instruction = (
-            "You are an expert radiologist assistant. Generate a concise, clinically accurate "
-            "impression/conclusion from the provided radiology report. Focus on the most important "
-            "findings and their clinical significance."
+            f"You are an expert radiologist assistant. Generate a concise, clinically accurate "
+            f"impression and conclusion from the provided radiology report in {lang_config['name']}. "
+            f"Focus on the most important findings and their clinical significance. "
+            f"CRITICAL: Respond ONLY in {lang_config['name']} language, matching the language of the report."
         )
 
         user_prompt = f"""
-Based on the following radiology report, generate a concise IMPRESSION/CONCLUSION section.
+Based on the following radiology report, generate BOTH a summary and a conclusion in {lang_config['name']}.
 
-Requirements:
-1. Summarize the key findings in {max_length} words or less
-2. Prioritize clinically significant findings
-3. Use clear, professional medical terminology
-4. Structure as numbered points if multiple findings
-5. Include any urgent or critical findings first
-6. Do NOT include headers or labels, just the content
+ORIGINAL CLINICAL INDICATION:
+\"\"\"{indication_text}\"\"\"
 
-FULL REPORT:
-{report_text}
+FULL RADIOLOGY REPORT:
+\"\"\"{report_text}\"\"\"
 
-Generate the IMPRESSION/CONCLUSION:
+Generate TWO sections:
+
+1. {lang_config['summary_label']} (Concise impression - {max_length} words max):
+   - Summarize the key imaging findings
+   - Prioritize clinically significant findings
+   - Use clear, professional medical terminology
+   - Structure as numbered points if multiple findings
+   {lang_config['example']}
+
+2. {lang_config['conclusion_label']} (Clinical conclusion based on indication):
+   - Address the original clinical question/indication
+   - Provide clinical interpretation
+   - Suggest follow-up if needed
+   - Be direct and actionable
+
+IMPORTANT:
+- Write ONLY in {lang_config['name']}
+- Do NOT include section headers in your response
+- Separate the summary and conclusion with a blank line
+- First paragraph = Summary, Second paragraph = Conclusion
+
+Generate the response:
 """.strip()
 
         try:
@@ -59,20 +133,30 @@ Generate the IMPRESSION/CONCLUSION:
                 system_instruction=system_instruction
             )
             response = model.generate_content(user_prompt)
-            summary = response.text.strip()
+            full_response = response.text.strip()
 
-            # Also extract key findings
+            # Split response into summary and conclusion
+            paragraphs = [p.strip() for p in full_response.split('\n\n') if p.strip()]
+
+            summary = paragraphs[0] if len(paragraphs) > 0 else full_response
+            conclusion = paragraphs[1] if len(paragraphs) > 1 else ""
+
+            # Extract key findings
             key_findings = self._extract_key_findings(report_text)
 
             return {
                 "summary": summary,
-                "key_findings": key_findings
+                "conclusion": conclusion,
+                "key_findings": key_findings,
+                "language": detected_language
             }
         except Exception as e:
             print(f"Error generating summary: {e}")
             return {
                 "summary": "Error generating summary. Please try again.",
-                "key_findings": []
+                "conclusion": "",
+                "key_findings": [],
+                "language": detected_language
             }
 
     def detect_inconsistencies(self, report_text: str) -> Dict[str, any]:
