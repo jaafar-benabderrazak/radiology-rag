@@ -1,7 +1,14 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, JSON, Enum
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
+import enum
+
+class UserRole(str, enum.Enum):
+    ADMIN = "admin"
+    DOCTOR = "doctor"
+    TECHNICIAN = "technician"
+    VIEWER = "viewer"
 
 class Template(Base):
     __tablename__ = "templates"
@@ -49,6 +56,37 @@ class Report(Base):
 
     # Relationship to template
     template = relationship("Template", back_populates="reports")
+
+    # Relationship to user (creator)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user = relationship("User", back_populates="reports")
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    username = Column(String(100), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(200), nullable=True)
+
+    # Professional information
+    role = Column(Enum(UserRole), default=UserRole.DOCTOR, nullable=False)
+    specialization = Column(String(200), nullable=True)  # e.g., "Radiology", "Neurology"
+    license_number = Column(String(100), nullable=True)
+    hospital_affiliation = Column(String(200), nullable=True)
+
+    # Account status
+    is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_login = Column(DateTime, nullable=True)
+
+    # Relationship to reports
+    reports = relationship("Report", back_populates="user")
 
 class SimilarCase(Base):
     __tablename__ = "similar_cases"

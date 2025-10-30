@@ -14,11 +14,13 @@ import google.generativeai as genai
 # Local imports
 from config import settings
 from database import get_db, Base, engine
-from models import Template, Report
+from models import Template, Report, User
 from cache_service import cache
 from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
 from ai_analysis_service import ai_analysis_service
+import auth_routes
+from auth import get_optional_user
 
 # Configure Gemini
 if not settings.GEMINI_API_KEY:
@@ -35,6 +37,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include authentication routes
+app.include_router(auth_routes.router)
 
 # Create tables on startup
 @app.on_event("startup")
@@ -165,7 +170,11 @@ async def list_templates(db: Session = Depends(get_db)):
     ]
 
 @app.post("/generate", response_model=GenerateResponse)
-async def generate(req: GenerateRequest, db: Session = Depends(get_db)):
+async def generate(
+    req: GenerateRequest,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user)
+):
     """Generate radiology report from clinical text"""
 
     meta = req.meta or Meta()
@@ -323,7 +332,8 @@ Now generate the COMPLETE report with all placeholders filled:
             referrer=meta.referrer,
             indication=req.input,
             generated_report=report_text,
-            study_datetime=meta.study_datetime
+            study_datetime=meta.study_datetime,
+            user_id=current_user.id if current_user else None
         )
         db.add(report)
         db.commit()

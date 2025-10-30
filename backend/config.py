@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
 
+    # Authentication
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-CHANGE-THIS-IN-PRODUCTION-use-openssl-rand-hex-32")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7)))  # 7 days
+
     # Cache settings
     CACHE_ENABLED: bool = os.getenv("CACHE_ENABLED", "true").lower() == "true"
     CACHE_TTL: int = int(os.getenv("CACHE_TTL", "3600"))  # 1 hour
