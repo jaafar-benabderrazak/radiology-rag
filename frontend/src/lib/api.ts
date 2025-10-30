@@ -112,15 +112,15 @@ export interface AnalysisResult {
 }
 
 // AI Analysis functions
-export async function generateSummary(reportId: number, maxLength: number = 200): Promise<SummaryResult> {
-  const url = `${base}/reports/${reportId}/generate-summary?max_length=${maxLength}`
+export async function generateSummary(reportId: number, language: string = 'en', maxLength: number = 200): Promise<SummaryResult> {
+  const url = `${base}/reports/${reportId}/generate-summary?max_length=${maxLength}&language=${language}`
   const res = await fetch(url, { method: 'POST' })
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }
 
-export async function validateReport(reportId: number): Promise<ValidationResult> {
-  const url = `${base}/reports/${reportId}/validate`
+export async function validateReport(reportId: number, language: string = 'en'): Promise<ValidationResult> {
+  const url = `${base}/reports/${reportId}/validate?language=${language}`
   const res = await fetch(url, { method: 'POST' })
   if (!res.ok) throw new Error(await res.text())
   return res.json()

@@ -47,7 +47,7 @@ class AIAnalysisService:
         else:
             return 'en'
 
-    def generate_summary(self, report_text: str, indication_text: str = "", max_length: int = 200) -> Dict[str, str]:
+    def generate_summary(self, report_text: str, indication_text: str = "", max_length: int = 200, language: str = None) -> Dict[str, str]:
         """
         Generate a concise summary/impression and conclusion from a full radiology report
 
@@ -55,12 +55,16 @@ class AIAnalysisService:
             report_text: The full report text
             indication_text: The original clinical indication (input)
             max_length: Maximum length of the summary in words
+            language: Language for output (en or fr). If None, auto-detect from report.
 
         Returns:
             Dict with 'summary', 'conclusion', 'key_findings', and 'language' keys
         """
-        # Detect language of the report
-        detected_language = self._detect_language(report_text)
+        # Use provided language or detect from report
+        if language:
+            target_language = language
+        else:
+            target_language = self._detect_language(report_text)
 
         # Language-specific instructions
         language_instructions = {
@@ -84,7 +88,7 @@ class AIAnalysisService:
             }
         }
 
-        lang_config = language_instructions.get(detected_language, language_instructions['en'])
+        lang_config = language_instructions.get(target_language, language_instructions['en'])
 
         # Prepare prompt for summary generation
         system_instruction = (
@@ -148,7 +152,7 @@ Generate the response:
                 "summary": summary,
                 "conclusion": conclusion,
                 "key_findings": key_findings,
-                "language": detected_language
+                "language": target_language
             }
         except Exception as e:
             print(f"Error generating summary: {e}")
@@ -156,19 +160,50 @@ Generate the response:
                 "summary": "Error generating summary. Please try again.",
                 "conclusion": "",
                 "key_findings": [],
-                "language": detected_language
+                "language": target_language
             }
 
-    def detect_inconsistencies(self, report_text: str) -> Dict[str, any]:
+    def detect_inconsistencies(self, report_text: str, language: str = 'en') -> Dict[str, any]:
         """
         Detect inconsistencies and errors in a radiology report
 
         Args:
             report_text: The full report text
+            language: Language for validation messages (en or fr, default: en)
 
         Returns:
             Dict with 'errors', 'warnings', 'is_consistent', and 'details' keys
         """
+        # Language-specific messages
+        messages = {
+            'en': {
+                'missing_sections': "Report is missing both Findings and Impression sections",
+                'cannot_check': "Cannot perform consistency check without key sections",
+                'missing_findings': "Findings section is empty or missing",
+                'missing_impression': "Impression/Conclusion section is empty or missing",
+                'contradiction_normal_abnormal': "Contradiction: Findings suggest normal exam but impression indicates abnormality",
+                'contradiction_abnormal_normal': "Contradiction: Findings describe abnormalities but impression suggests normal exam",
+                'contradiction_details_1': "Findings contain 'normal/unremarkable' while impression suggests abnormality",
+                'contradiction_details_2': "Findings describe abnormalities while impression suggests normal exam",
+                'unfilled_placeholder': "Unfilled placeholder detected",
+                'brief_impression': "Impression section is very brief and may be incomplete"
+            },
+            'fr': {
+                'missing_sections': "Le rapport manque des sections Résultats et Impression",
+                'cannot_check': "Impossible d'effectuer une vérification de cohérence sans sections clés",
+                'missing_findings': "La section Résultats est vide ou manquante",
+                'missing_impression': "La section Impression/Conclusion est vide ou manquante",
+                'contradiction_normal_abnormal': "Contradiction: Les résultats suggèrent un examen normal mais l'impression indique une anomalie",
+                'contradiction_abnormal_normal': "Contradiction: Les résultats décrivent des anomalies mais l'impression suggère un examen normal",
+                'contradiction_details_1': "Les résultats contiennent 'normal/sans particularité' tandis que l'impression suggère une anomalie",
+                'contradiction_details_2': "Les résultats décrivent des anomalies tandis que l'impression suggère un examen normal",
+                'unfilled_placeholder': "Espace réservé non rempli détecté",
+                'brief_impression': "La section Impression est très brève et peut être incomplète"
+            }
+        }
+
+        msg = messages.get(language, messages['en'])
+
         # Extract different sections
         findings = self._extract_section(report_text, ["findings", "résultats", "observations"])
         impression = self._extract_section(report_text, ["impression", "conclusion", "synthèse"])
@@ -179,23 +214,26 @@ Generate the response:
 
         # Check if key sections exist
         if not findings and not impression:
-            errors.append("Report is missing both Findings and Impression sections")
+            errors.append(msg['missing_sections'])
             return {
                 "errors": errors,
                 "warnings": warnings,
                 "is_consistent": False,
                 "severity": "high",
-                "details": ["Cannot perform consistency check without key sections"]
+                "details": [msg['cannot_check']]
             }
 
         # Use AI to check for semantic inconsistencies
+        language_name = "French" if language == 'fr' else "English"
         system_instruction = (
-            "You are an expert medical quality assurance assistant. Analyze radiology reports "
-            "for inconsistencies, errors, and logical contradictions between findings and impressions."
+            f"You are an expert medical quality assurance assistant. Analyze radiology reports "
+            f"for inconsistencies, errors, and logical contradictions between findings and impressions. "
+            f"Respond in {language_name}."
         )
 
         user_prompt = f"""
 Analyze the following radiology report for inconsistencies, errors, and contradictions.
+Respond in {language_name}.
 
 REPORT:
 {report_text}
@@ -207,7 +245,7 @@ Check for:
 4. Logical inconsistencies
 5. Unclear or ambiguous statements that could lead to misinterpretation
 
-Respond in the following JSON-like format:
+Respond in the following JSON-like format (in {language_name}):
 ERRORS: [list critical issues that must be fixed]
 WARNINGS: [list minor issues or potential concerns]
 INCONSISTENCIES: [list specific contradictions found]
@@ -233,7 +271,7 @@ Be specific and reference the conflicting statements.
             severity = parsed_results.get('severity', 'medium')
 
             # Add rule-based checks
-            rule_based_checks = self._rule_based_validation(findings, impression)
+            rule_based_checks = self._rule_based_validation(findings, impression, msg)
             errors.extend(rule_based_checks['errors'])
             warnings.extend(rule_based_checks['warnings'])
             details.extend(rule_based_checks['details'])
@@ -318,17 +356,17 @@ Be specific and reference the conflicting statements.
 
         return result
 
-    def _rule_based_validation(self, findings: str, impression: str) -> Dict[str, List[str]]:
+    def _rule_based_validation(self, findings: str, impression: str, msg: Dict[str, str]) -> Dict[str, List[str]]:
         """Apply rule-based validation checks"""
         errors = []
         warnings = []
         details = []
 
         if not findings:
-            warnings.append("Findings section is empty or missing")
+            warnings.append(msg['missing_findings'])
 
         if not impression:
-            warnings.append("Impression/Conclusion section is empty or missing")
+            warnings.append(msg['missing_impression'])
 
         # Check for conflicting sentiment
         if findings and impression:
@@ -340,22 +378,22 @@ Be specific and reference the conflicting statements.
             impression_abnormal = any(word in impression.lower() for word in ['abnormal', 'lesion', 'mass', 'fracture', 'anomalie'])
 
             if findings_normal and impression_abnormal:
-                errors.append("Contradiction: Findings suggest normal exam but impression indicates abnormality")
-                details.append("Findings contain 'normal/unremarkable' while impression suggests abnormality")
+                errors.append(msg['contradiction_normal_abnormal'])
+                details.append(msg['contradiction_details_1'])
 
             if findings_abnormal and impression_normal:
-                errors.append("Contradiction: Findings describe abnormalities but impression suggests normal exam")
-                details.append("Findings describe abnormalities while impression suggests normal exam")
+                errors.append(msg['contradiction_abnormal_normal'])
+                details.append(msg['contradiction_details_2'])
 
         # Check for placeholders that weren't filled
         placeholder_patterns = [r'<[^>]+>', r'\{[^}]+\}', r'TODO', r'FILL', r'XXX']
         for pattern in placeholder_patterns:
             if re.search(pattern, findings + impression, re.IGNORECASE):
-                errors.append(f"Unfilled placeholder detected: {pattern}")
+                errors.append(f"{msg['unfilled_placeholder']}: {pattern}")
 
         # Check for very short impression (likely incomplete)
         if impression and len(impression.split()) < 3:
-            warnings.append("Impression section is very brief and may be incomplete")
+            warnings.append(msg['brief_impression'])
 
         return {
             'errors': errors,

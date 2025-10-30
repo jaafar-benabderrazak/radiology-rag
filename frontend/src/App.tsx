@@ -262,10 +262,13 @@ export default function App() {
 
     setAnalysisLoading(true)
     try {
-      const summaryResult = await generateSummary(result.report_id)
+      const summaryResult = await generateSummary(result.report_id, language)
       setSummary(summaryResult)
     } catch (err: any) {
-      alert(`Failed to generate summary: ${err.message}`)
+      const message = language === 'fr'
+        ? `Échec de la génération du résumé: ${err.message}`
+        : `Failed to generate summary: ${err.message}`
+      alert(message)
     } finally {
       setAnalysisLoading(false)
     }
@@ -276,10 +279,13 @@ export default function App() {
 
     setAnalysisLoading(true)
     try {
-      const validationResult = await validateReport(result.report_id)
+      const validationResult = await validateReport(result.report_id, language)
       setValidation(validationResult)
     } catch (err: any) {
-      alert(`Failed to validate report: ${err.message}`)
+      const message = language === 'fr'
+        ? `Échec de la validation du rapport: ${err.message}`
+        : `Failed to validate report: ${err.message}`
+      alert(message)
     } finally {
       setAnalysisLoading(false)
     }

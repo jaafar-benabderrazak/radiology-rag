@@ -455,6 +455,7 @@ async def download_report_pdf(
 async def generate_report_summary(
     report_id: int,
     max_length: int = 200,
+    language: str = 'en',
     db: Session = Depends(get_db)
 ):
     """
@@ -463,6 +464,7 @@ async def generate_report_summary(
     Args:
         report_id: The report ID
         max_length: Maximum length of summary in words (default: 200)
+        language: Language for summary (en or fr, default: en)
     """
     # Get report from database
     report = db.query(Report).filter(Report.id == report_id).first()
@@ -470,18 +472,19 @@ async def generate_report_summary(
         raise HTTPException(status_code=404, detail="Report not found")
 
     try:
-        # Generate summary using AI service with indication text
+        # Generate summary using AI service with indication text and specified language
         result = ai_analysis_service.generate_summary(
             report.generated_report,
             indication_text=report.indication,
-            max_length=max_length
+            max_length=max_length,
+            language=language
         )
 
         # Update report with summary, conclusion, and language
         report.ai_summary = result['summary']
         report.ai_conclusion = result.get('conclusion', '')
         report.key_findings = result['key_findings']
-        report.report_language = result.get('language', 'en')
+        report.report_language = language
         db.commit()
 
         return {
@@ -490,7 +493,7 @@ async def generate_report_summary(
             "summary": result['summary'],
             "conclusion": result.get('conclusion', ''),
             "key_findings": result['key_findings'],
-            "language": result.get('language', 'en')
+            "language": language
         }
 
     except Exception as e:
@@ -500,6 +503,7 @@ async def generate_report_summary(
 @app.post("/reports/{report_id}/validate")
 async def validate_report(
     report_id: int,
+    language: str = 'en',
     db: Session = Depends(get_db)
 ):
     """
@@ -513,6 +517,7 @@ async def validate_report(
 
     Args:
         report_id: The report ID
+        language: Language for validation messages (en or fr, default: en)
     """
     # Get report from database
     report = db.query(Report).filter(Report.id == report_id).first()
@@ -520,9 +525,10 @@ async def validate_report(
         raise HTTPException(status_code=404, detail="Report not found")
 
     try:
-        # Validate using AI service
+        # Validate using AI service with specified language
         validation_result = ai_analysis_service.detect_inconsistencies(
-            report.generated_report
+            report.generated_report,
+            language=language
         )
 
         # Determine status
