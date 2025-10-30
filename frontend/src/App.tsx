@@ -12,7 +12,126 @@ import {
   type ValidationResult
 } from "./lib/api"
 
+// Language interface
+type Language = 'en' | 'fr'
+
+// UI translations
+const translations = {
+  en: {
+    title: "Radiology Report Generator",
+    subtitle: "AI-Powered Medical Report Generation with RAG",
+    clinicalInfo: "Clinical Information",
+    reportTemplate: "Report Template",
+    autoDetect: "Auto-detect (with RAG)",
+    autoDetectHelp: "AI will automatically select the best template based on your input and use similar cases for context",
+    selectedTemplateHelp: "Using selected template directly (no RAG)",
+    clinicalIndication: "Clinical Indication",
+    voiceInput: "Voice Input",
+    recording: "Recording...",
+    placeholder: `Enter clinical indication, symptoms, or reason for study...
+
+Example:
+Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer elevated. Rule out pulmonary embolism.`,
+    metadata: "Patient & Study Metadata (Optional)",
+    patientName: "Patient Name",
+    accessionNumber: "Accession #",
+    radiologist: "Radiologist",
+    hospital: "Hospital",
+    generateReport: "Generate Report",
+    generating: "Generating...",
+    clear: "Clear",
+    generatedReport: "Generated Report",
+    copyToClipboard: "Copy to Clipboard",
+    copiedToClipboard: "Report copied to clipboard!",
+    downloadOptions: "Download Options",
+    word: "Word (.docx)",
+    wordHighlighted: "Word (Highlighted)",
+    pdf: "PDF",
+    downloading: "Downloading...",
+    reportIdError: "Report ID not available. Cannot download formatted documents.",
+    aiAnalysisTools: "AI Analysis Tools",
+    generateSummary: "Generate Summary",
+    validateReport: "Validate Report",
+    analyzing: "Analyzing...",
+    validating: "Validating...",
+    aiGeneratedSummary: "AI-Generated Summary",
+    summary: "Summary:",
+    conclusion: "Conclusion:",
+    keyFindings: "Key Findings:",
+    validationResults: "Validation Results",
+    errors: "Errors:",
+    warnings: "Warnings:",
+    viewDetails: "View Details",
+    noIssuesFound: "No issues found. Report appears consistent and complete.",
+    similarCasesReference: "Similar Cases Reference",
+    case: "Case",
+    match: "match",
+    emptyState: "Enter clinical information and click \"Generate Report\" to create a radiology report",
+    language: "Language"
+  },
+  fr: {
+    title: "Générateur de Rapports Radiologiques",
+    subtitle: "Génération de Rapports Médicaux Alimentée par IA avec RAG",
+    clinicalInfo: "Informations Cliniques",
+    reportTemplate: "Modèle de Rapport",
+    autoDetect: "Détection automatique (avec RAG)",
+    autoDetectHelp: "L'IA sélectionnera automatiquement le meilleur modèle basé sur votre saisie et utilisera des cas similaires pour le contexte",
+    selectedTemplateHelp: "Utilisation du modèle sélectionné directement (sans RAG)",
+    clinicalIndication: "Indication Clinique",
+    voiceInput: "Saisie Vocale",
+    recording: "Enregistrement...",
+    placeholder: `Entrez l'indication clinique, les symptômes ou la raison de l'examen...
+
+Exemple:
+Patient avec dyspnée aiguë et douleur thoracique pleurétique. D-dimères élevés. Éliminer une embolie pulmonaire.`,
+    metadata: "Métadonnées Patient & Examen (Optionnel)",
+    patientName: "Nom du Patient",
+    accessionNumber: "Numéro d'Accès",
+    radiologist: "Radiologue",
+    hospital: "Hôpital",
+    generateReport: "Générer le Rapport",
+    generating: "Génération en cours...",
+    clear: "Effacer",
+    generatedReport: "Rapport Généré",
+    copyToClipboard: "Copier dans le Presse-papiers",
+    copiedToClipboard: "Rapport copié dans le presse-papiers!",
+    downloadOptions: "Options de Téléchargement",
+    word: "Word (.docx)",
+    wordHighlighted: "Word (Surligné)",
+    pdf: "PDF",
+    downloading: "Téléchargement...",
+    reportIdError: "ID de rapport non disponible. Impossible de télécharger les documents formatés.",
+    aiAnalysisTools: "Outils d'Analyse IA",
+    generateSummary: "Générer un Résumé",
+    validateReport: "Valider le Rapport",
+    analyzing: "Analyse...",
+    validating: "Validation...",
+    aiGeneratedSummary: "Résumé Généré par IA",
+    summary: "Résumé:",
+    conclusion: "Conclusion:",
+    keyFindings: "Constatations Clés:",
+    validationResults: "Résultats de Validation",
+    errors: "Erreurs:",
+    warnings: "Avertissements:",
+    viewDetails: "Voir les Détails",
+    noIssuesFound: "Aucun problème trouvé. Le rapport semble cohérent et complet.",
+    similarCasesReference: "Référence de Cas Similaires",
+    case: "Cas",
+    match: "correspondance",
+    emptyState: "Entrez les informations cliniques et cliquez sur \"Générer le Rapport\" pour créer un rapport radiologique",
+    language: "Langue"
+  }
+}
+
 export default function App() {
+  // Language state - default to French
+  const [language, setLanguage] = useState<Language>(() => {
+    const saved = localStorage.getItem('radiology-app-language')
+    return (saved === 'en' || saved === 'fr') ? saved : 'fr'
+  })
+
+  const t = translations[language]
+
   const [templates, setTemplates] = useState<Template[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string>("auto")
   const [inputText, setInputText] = useState("")
@@ -36,6 +155,11 @@ export default function App() {
   const [hospitalName, setHospitalName] = useState("General Hospital")
   const [accession, setAccession] = useState("CR-000001")
 
+  // Save language preference
+  useEffect(() => {
+    localStorage.setItem('radiology-app-language', language)
+  }, [language])
+
   // Load templates on mount
   useEffect(() => {
     fetchTemplates()
@@ -51,7 +175,7 @@ export default function App() {
 
       recognitionInstance.continuous = true
       recognitionInstance.interimResults = true
-      recognitionInstance.lang = 'en-US' // Default language, will be updated
+      recognitionInstance.lang = language === 'fr' ? 'fr-FR' : 'en-US'
 
       recognitionInstance.onresult = (event: any) => {
         let interimTranscript = ''
@@ -75,7 +199,10 @@ export default function App() {
         console.error('Speech recognition error:', event.error)
         setIsRecording(false)
         if (event.error === 'not-allowed') {
-          alert('Microphone access denied. Please allow microphone access in your browser settings.')
+          const message = language === 'fr'
+            ? 'Accès au microphone refusé. Veuillez autoriser l\'accès au microphone dans les paramètres de votre navigateur.'
+            : 'Microphone access denied. Please allow microphone access in your browser settings.'
+          alert(message)
         }
       }
 
@@ -85,7 +212,14 @@ export default function App() {
 
       setRecognition(recognitionInstance)
     }
-  }, [])
+  }, [language])
+
+  // Update recognition language when language changes
+  useEffect(() => {
+    if (recognition) {
+      recognition.lang = language === 'fr' ? 'fr-FR' : 'en-US'
+    }
+  }, [language, recognition])
 
   const handleGenerate = async () => {
     if (!inputText.trim()) return
@@ -153,7 +287,10 @@ export default function App() {
 
   const toggleVoiceInput = () => {
     if (!recognition) {
-      alert('Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.')
+      const message = language === 'fr'
+        ? 'La saisie vocale n\'est pas prise en charge par votre navigateur. Veuillez utiliser Chrome, Edge ou Safari.'
+        : 'Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.'
+      alert(message)
       return
     }
 
@@ -166,7 +303,10 @@ export default function App() {
         setIsRecording(true)
       } catch (err) {
         console.error('Error starting recognition:', err)
-        alert('Could not start voice input. Please try again.')
+        const message = language === 'fr'
+          ? 'Impossible de démarrer la saisie vocale. Veuillez réessayer.'
+          : 'Could not start voice input. Please try again.'
+        alert(message)
       }
     }
   }
@@ -214,8 +354,26 @@ export default function App() {
     <div className="app">
       <header className="header">
         <div className="container">
-          <h1 className="title">Radiology Report Generator</h1>
-          <p className="subtitle">AI-Powered Medical Report Generation with RAG</p>
+          <div className="header-content">
+            <div>
+              <h1 className="title">{t.title}</h1>
+              <p className="subtitle">{t.subtitle}</p>
+            </div>
+            <div className="language-selector">
+              <label htmlFor="language-select" className="language-label">
+                {t.language}
+              </label>
+              <select
+                id="language-select"
+                className="language-select"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as Language)}
+              >
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -223,11 +381,11 @@ export default function App() {
         <div className="grid">
           {/* Input Section */}
           <div className="card">
-            <h2 className="card-title">Clinical Information</h2>
+            <h2 className="card-title">{t.clinicalInfo}</h2>
 
             <div className="form-group">
               <label htmlFor="template" className="label">
-                Report Template
+                {t.reportTemplate}
               </label>
               <select
                 id="template"
@@ -235,7 +393,7 @@ export default function App() {
                 value={selectedTemplate}
                 onChange={(e) => setSelectedTemplate(e.target.value)}
               >
-                <option value="auto">Auto-detect (with RAG)</option>
+                <option value="auto">{t.autoDetect}</option>
                 {templates.map((tpl) => (
                   <option key={tpl.template_id} value={tpl.template_id}>
                     {tpl.title}
@@ -244,28 +402,28 @@ export default function App() {
               </select>
               {selectedTemplate === "auto" && (
                 <p className="help-text">
-                  AI will automatically select the best template based on your input and use similar cases for context
+                  {t.autoDetectHelp}
                 </p>
               )}
               {selectedTemplate !== "auto" && (
                 <p className="help-text">
-                  Using selected template directly (no RAG)
+                  {t.selectedTemplateHelp}
                 </p>
               )}
             </div>
 
             <div className="form-group">
               <label htmlFor="indication" className="label">
-                Clinical Indication
+                {t.clinicalIndication}
                 <button
                   type="button"
                   className={`voice-btn ${isRecording ? 'recording' : ''}`}
                   onClick={toggleVoiceInput}
-                  title={isRecording ? "Stop recording" : "Start voice input"}
+                  title={isRecording ? t.recording : t.voiceInput}
                 >
                   {isRecording ? '🔴' : '🎤'}
                   <span className="voice-label">
-                    {isRecording ? ' Recording...' : ' Voice Input'}
+                    {isRecording ? ` ${t.recording}` : ` ${t.voiceInput}`}
                   </span>
                 </button>
               </label>
@@ -274,20 +432,17 @@ export default function App() {
                 className="textarea"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Enter clinical indication, symptoms, or reason for study...
-
-Example:
-Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer elevated. Rule out pulmonary embolism."
+                placeholder={t.placeholder}
                 rows={8}
               />
             </div>
 
             {/* Metadata Section */}
             <details className="metadata-section">
-              <summary className="metadata-summary">Patient & Study Metadata (Optional)</summary>
+              <summary className="metadata-summary">{t.metadata}</summary>
               <div className="metadata-grid">
                 <div className="form-group">
-                  <label htmlFor="patient" className="label-sm">Patient Name</label>
+                  <label htmlFor="patient" className="label-sm">{t.patientName}</label>
                   <input
                     id="patient"
                     type="text"
@@ -298,7 +453,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="accession" className="label-sm">Accession #</label>
+                  <label htmlFor="accession" className="label-sm">{t.accessionNumber}</label>
                   <input
                     id="accession"
                     type="text"
@@ -309,7 +464,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="doctor" className="label-sm">Radiologist</label>
+                  <label htmlFor="doctor" className="label-sm">{t.radiologist}</label>
                   <input
                     id="doctor"
                     type="text"
@@ -320,7 +475,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="hospital" className="label-sm">Hospital</label>
+                  <label htmlFor="hospital" className="label-sm">{t.hospital}</label>
                   <input
                     id="hospital"
                     type="text"
@@ -342,10 +497,10 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                 {loading ? (
                   <>
                     <span className="spinner"></span>
-                    Generating...
+                    {t.generating}
                   </>
                 ) : (
-                  "Generate Report"
+                  t.generateReport
                 )}
               </button>
               <button
@@ -353,7 +508,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                 onClick={handleClear}
                 disabled={loading}
               >
-                Clear
+                {t.clear}
               </button>
             </div>
 
@@ -366,7 +521,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
 
           {/* Output Section */}
           <div className="card">
-            <h2 className="card-title">Generated Report</h2>
+            <h2 className="card-title">{t.generatedReport}</h2>
 
             {result ? (
               <>
@@ -376,7 +531,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                   </span>
                   {result.similar_cases && result.similar_cases.length > 0 && (
                     <span className="badge badge-info">
-                      {result.similar_cases.length} similar cases used
+                      {result.similar_cases.length} {language === 'fr' ? 'cas similaires utilisés' : 'similar cases used'}
                     </span>
                   )}
                 </div>
@@ -390,68 +545,68 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                     className="btn btn-secondary"
                     onClick={() => {
                       navigator.clipboard.writeText(result.report)
-                      alert("Report copied to clipboard!")
+                      alert(t.copiedToClipboard)
                     }}
                   >
-                    Copy to Clipboard
+                    {t.copyToClipboard}
                   </button>
                 </div>
 
                 <div className="download-section">
-                  <h3 className="download-title">Download Options</h3>
+                  <h3 className="download-title">{t.downloadOptions}</h3>
                   <div className="button-group">
                     <button
                       className="btn btn-download"
                       onClick={() => handleDownloadWord(false)}
                       disabled={downloading || !result.report_id}
-                      title="Download as Word document with original template formatting"
+                      title={language === 'fr' ? "Télécharger en tant que document Word avec mise en forme d'origine" : "Download as Word document with original template formatting"}
                     >
-                      {downloading ? "Downloading..." : "Word (.docx)"}
+                      {downloading ? t.downloading : t.word}
                     </button>
                     <button
                       className="btn btn-download-highlight"
                       onClick={() => handleDownloadWord(true)}
                       disabled={downloading || !result.report_id}
-                      title="Download as Word document with AI-generated content highlighted"
+                      title={language === 'fr' ? "Télécharger en tant que document Word avec contenu IA surligné" : "Download as Word document with AI-generated content highlighted"}
                     >
-                      {downloading ? "Downloading..." : "Word (Highlighted)"}
+                      {downloading ? t.downloading : t.wordHighlighted}
                     </button>
                     <button
                       className="btn btn-download-pdf"
                       onClick={handleDownloadPDF}
                       disabled={downloading || !result.report_id}
-                      title="Download as PDF document"
+                      title={language === 'fr' ? "Télécharger en tant que document PDF" : "Download as PDF document"}
                     >
-                      {downloading ? "Downloading..." : "PDF"}
+                      {downloading ? t.downloading : t.pdf}
                     </button>
                   </div>
                   {!result.report_id && (
                     <p className="help-text" style={{ marginTop: '0.5rem', color: '#e53e3e' }}>
-                      Report ID not available. Cannot download formatted documents.
+                      {t.reportIdError}
                     </p>
                   )}
                 </div>
 
                 {/* AI Analysis Section */}
                 <div className="ai-analysis-section">
-                  <h3 className="analysis-title">AI Analysis Tools</h3>
+                  <h3 className="analysis-title">{t.aiAnalysisTools}</h3>
 
                   <div className="button-group">
                     <button
                       className="btn btn-analysis"
                       onClick={handleGenerateSummary}
                       disabled={analysisLoading || !result.report_id}
-                      title="Generate a concise AI-powered summary of the report"
+                      title={language === 'fr' ? "Générer un résumé concis alimenté par l'IA du rapport" : "Generate a concise AI-powered summary of the report"}
                     >
-                      {analysisLoading ? "Analyzing..." : "Generate Summary"}
+                      {analysisLoading ? t.analyzing : t.generateSummary}
                     </button>
                     <button
                       className="btn btn-validate"
                       onClick={handleValidateReport}
                       disabled={analysisLoading || !result.report_id}
-                      title="Check for inconsistencies and errors in the report"
+                      title={language === 'fr' ? "Vérifier les incohérences et erreurs dans le rapport" : "Check for inconsistencies and errors in the report"}
                     >
-                      {analysisLoading ? "Validating..." : "Validate Report"}
+                      {analysisLoading ? t.validating : t.validateReport}
                     </button>
                   </div>
 
@@ -459,27 +614,27 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                   {summary && (
                     <div className="summary-result">
                       <h4 className="result-title">
-                        <span className="icon">📝</span> AI-Generated Summary
+                        <span className="icon">📝</span> {t.aiGeneratedSummary}
                         {summary.language && (
                           <span className="language-badge">{summary.language.toUpperCase()}</span>
                         )}
                       </h4>
                       <div className="summary-content">
                         <div className="summary-section">
-                          <strong className="section-label">Summary:</strong>
+                          <strong className="section-label">{t.summary}</strong>
                           <p className="summary-text">{summary.summary}</p>
                         </div>
 
                         {summary.conclusion && (
                           <div className="conclusion-section">
-                            <strong className="section-label">Conclusion:</strong>
+                            <strong className="section-label">{t.conclusion}</strong>
                             <p className="summary-text">{summary.conclusion}</p>
                           </div>
                         )}
 
                         {summary.key_findings && summary.key_findings.length > 0 && (
                           <div className="key-findings">
-                            <strong>Key Findings:</strong>
+                            <strong>{t.keyFindings}</strong>
                             <ul>
                               {summary.key_findings.map((finding, idx) => (
                                 <li key={idx}>{finding}</li>
@@ -498,7 +653,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                         <span className="icon">
                           {validation.status === 'passed' ? '✅' : validation.status === 'warnings' ? '⚠️' : '❌'}
                         </span>
-                        Validation Results
+                        {t.validationResults}
                         <span className={`validation-badge ${validation.status}`}>
                           {validation.status.toUpperCase()}
                         </span>
@@ -507,7 +662,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                       <div className="validation-content">
                         {validation.errors && validation.errors.length > 0 && (
                           <div className="validation-errors">
-                            <strong className="error-title">🚨 Errors:</strong>
+                            <strong className="error-title">🚨 {t.errors}</strong>
                             <ul>
                               {validation.errors.map((error, idx) => (
                                 <li key={idx} className="error-item">{error}</li>
@@ -518,7 +673,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
 
                         {validation.warnings && validation.warnings.length > 0 && (
                           <div className="validation-warnings">
-                            <strong className="warning-title">⚠️ Warnings:</strong>
+                            <strong className="warning-title">⚠️ {t.warnings}</strong>
                             <ul>
                               {validation.warnings.map((warning, idx) => (
                                 <li key={idx} className="warning-item">{warning}</li>
@@ -529,7 +684,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
 
                         {validation.details && validation.details.length > 0 && (
                           <details className="validation-details-section">
-                            <summary>View Details</summary>
+                            <summary>{t.viewDetails}</summary>
                             <ul>
                               {validation.details.map((detail, idx) => (
                                 <li key={idx}>{detail}</li>
@@ -540,7 +695,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
 
                         {validation.status === 'passed' && (
                           <p className="validation-success">
-                            ✓ No issues found. Report appears consistent and complete.
+                            ✓ {t.noIssuesFound}
                           </p>
                         )}
                       </div>
@@ -550,14 +705,14 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
 
                 {result.similar_cases && result.similar_cases.length > 0 && (
                   <details className="similar-cases-section">
-                    <summary className="metadata-summary">Similar Cases Reference</summary>
+                    <summary className="metadata-summary">{t.similarCasesReference}</summary>
                     <div className="similar-cases-list">
                       {result.similar_cases.map((case_, idx) => (
                         <div key={idx} className="similar-case">
                           <div className="case-header">
-                            <strong>Case {idx + 1}</strong>
+                            <strong>{t.case} {idx + 1}</strong>
                             <span className="similarity-score">
-                              {(case_.score * 100).toFixed(1)}% match
+                              {(case_.score * 100).toFixed(1)}% {t.match}
                             </span>
                           </div>
                           <p className="case-text">{case_.text.substring(0, 200)}...</p>
@@ -572,7 +727,7 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
                 <svg className="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <p>Enter clinical information and click "Generate Report" to create a radiology report</p>
+                <p>{t.emptyState}</p>
               </div>
             )}
           </div>
@@ -605,6 +760,59 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
           box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
           padding: 2rem 0;
           margin-bottom: 2rem;
+        }
+
+        .header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+          .header-content {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+        }
+
+        .language-selector {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          background: #f7fafc;
+          padding: 0.75rem 1.25rem;
+          border-radius: 8px;
+          border: 2px solid #e2e8f0;
+        }
+
+        .language-label {
+          font-weight: 600;
+          color: #4a5568;
+          font-size: 0.9rem;
+          margin: 0;
+        }
+
+        .language-select {
+          padding: 0.5rem 0.75rem;
+          border: 2px solid #cbd5e0;
+          border-radius: 6px;
+          font-size: 0.95rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          background: white;
+          color: #2d3748;
+        }
+
+        .language-select:hover {
+          border-color: #667eea;
+        }
+
+        .language-select:focus {
+          outline: none;
+          border-color: #667eea;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .container {
