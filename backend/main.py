@@ -14,11 +14,13 @@ import google.generativeai as genai
 # Local imports
 from config import settings
 from database import get_db, Base, engine
-from models import Template, Report
+from models import Template, Report, User
 from cache_service import cache
 from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
 from ai_analysis_service import ai_analysis_service
+from auth import get_current_active_user
+from routers import auth_router, users_router
 
 # Configure Gemini
 if not settings.GEMINI_API_KEY:
@@ -36,6 +38,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include authentication routers
+app.include_router(auth_router.router)
+app.include_router(users_router.router)
+
 # Create tables on startup
 @app.on_event("startup")
 async def startup_event():
@@ -51,6 +57,7 @@ async def startup_event():
     # Initialize services (already done in their constructors)
     print("✓ Cache service initialized")
     print("✓ Vector service initialized")
+    print("✓ Authentication system ready")
 
     print("=" * 60)
     print("Backend ready!")
@@ -165,10 +172,21 @@ async def list_templates(db: Session = Depends(get_db)):
     ]
 
 @app.post("/generate", response_model=GenerateResponse)
-async def generate(req: GenerateRequest, db: Session = Depends(get_db)):
-    """Generate radiology report from clinical text"""
+async def generate(
+    req: GenerateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Generate radiology report from clinical text (requires authentication)"""
 
     meta = req.meta or Meta()
+
+    # Use current user's information as the reporting radiologist
+    if not meta.doctorName or meta.doctorName == "Dr. John Doe":
+        meta.doctorName = current_user.full_name
+    if not meta.hospitalName or meta.hospitalName == "General Hospital":
+        meta.hospitalName = current_user.hospital_name or "General Hospital"
+
     if not meta.study_datetime:
         meta.study_datetime = datetime.now().strftime("%Y-%m-%d %H:%M")
 

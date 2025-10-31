@@ -1,7 +1,13 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, JSON, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
+import enum
+
+class UserRole(str, enum.Enum):
+    ADMIN = "admin"
+    DOCTOR = "doctor"
+    RADIOLOGIST = "radiologist"
 
 class Template(Base):
     __tablename__ = "templates"
@@ -61,3 +67,23 @@ class SimilarCase(Base):
     category = Column(String(100), nullable=True)
     embedding_id = Column(String(100), nullable=True)  # ID in Qdrant
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String, unique=True, index=True, nullable=False)
+    full_name = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    role = Column(SQLEnum(UserRole), default=UserRole.DOCTOR, nullable=False)
+    hospital_name = Column(String, nullable=True)
+    specialization = Column(String, nullable=True)
+    license_number = Column(String, unique=True, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    is_verified = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<User(id={self.id}, email={self.email}, role={self.role})>"
