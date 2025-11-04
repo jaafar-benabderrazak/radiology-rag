@@ -7,6 +7,19 @@ echo Radiology RAG - Local Development
 echo ========================================
 echo.
 
+REM Change to project root directory
+cd /d "%~dp0.."
+
+REM Check if Docker Desktop is running
+docker info >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Docker Desktop is not running!
+    echo Please start Docker Desktop and try again.
+    echo.
+    pause
+    exit /b 1
+)
+
 REM Check if .env.local exists
 if not exist .env.local (
     echo Creating .env.local from template...
