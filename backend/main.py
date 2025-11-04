@@ -14,13 +14,15 @@ import google.generativeai as genai
 # Local imports
 from config import settings
 from database import get_db, Base, engine
-from models import Template, Report, User
+from models import Template, Report, User, CriticalNotification, NotificationStatus, NotificationPriority
 from cache_service import cache
 from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
 from ai_analysis_service import ai_analysis_service
 from auth import get_current_active_user
-from routers import auth_router, users_router, reports_router, templates_router, suggestions_router
+from routers import auth_router, users_router, reports_router, templates_router, suggestions_router, notifications_router
+from critical_findings_detector import critical_detector
+from notification_service import notification_service
 
 # Configure Gemini
 if not settings.GEMINI_API_KEY:
@@ -46,6 +48,7 @@ app.include_router(users_router.router)
 app.include_router(reports_router.router)
 app.include_router(templates_router.router)
 app.include_router(suggestions_router.router)
+app.include_router(notifications_router.router)
 
 # Create tables on startup
 @app.on_event("startup")
@@ -90,6 +93,7 @@ class GenerateResponse(BaseModel):
     highlights: List[str] = []
     similar_cases: List[dict] = []
     report_id: Optional[int] = None  # ID of the saved report
+    critical_findings: Optional[dict] = None  # Critical findings detection results
 
 class TemplateResponse(BaseModel):
     id: int
@@ -281,6 +285,12 @@ Now generate the COMPLETE report with all placeholders filled:
     # Extract text
     report_text = (resp.text or "").strip()
 
+    # Detect critical findings
+    critical_results = critical_detector.detect_critical_findings(
+        report_text=report_text,
+        indication=req.input
+    )
+
     # Generate highlights - extract key phrases from IMPRESSION/CONCLUSION section
     highlights: List[str] = []
 
@@ -367,6 +377,52 @@ Now generate the COMPLETE report with all placeholders filled:
         db.refresh(report)  # Get the generated ID
         report_id = report.id
         print(f"✓ Report saved with ID: {report_id}")
+
+        # Handle critical findings notification
+        if critical_results['requires_notification'] and meta.referrer:
+            try:
+                print(f"⚠️  Critical findings detected, creating notification...")
+
+                # Create notification record
+                notification = CriticalNotification(
+                    report_id=report.id,
+                    sent_by_user_id=current_user.id,
+                    recipient_email=meta.referrer if '@' in str(meta.referrer) else f"{meta.referrer}@hospital.com",
+                    critical_findings=critical_results['findings'],
+                    priority=NotificationPriority.CRITICAL if critical_results['highest_severity'] == 'critical' else NotificationPriority.URGENT,
+                    status=NotificationStatus.PENDING,
+                    notification_method='email'
+                )
+                db.add(notification)
+                db.commit()
+                db.refresh(notification)
+
+                # Send email notification
+                # Extract relevant excerpt from report (first 500 chars of impression/conclusion)
+                report_excerpt = report_text[:500] if len(report_text) <= 500 else report_text[:497] + "..."
+
+                email_sent = notification_service.send_critical_finding_notification(
+                    recipient_email=notification.recipient_email,
+                    patient_name=meta.patient_name or "Unknown Patient",
+                    accession=meta.accession or "N/A",
+                    findings=critical_results['findings'],
+                    report_excerpt=report_excerpt,
+                    radiologist_name=current_user.full_name,
+                    notification_id=notification.id
+                )
+
+                if email_sent:
+                    notification.status = NotificationStatus.SENT
+                    notification.sent_at = datetime.now()
+                    db.commit()
+                    print(f"✓ Critical findings notification sent successfully")
+                else:
+                    print(f"⚠️  Failed to send notification email")
+
+            except Exception as e:
+                print(f"Error creating/sending critical notification: {e}")
+                db.rollback()
+
     except Exception as e:
         print(f"Error saving report: {e}")
         db.rollback()
@@ -378,7 +434,8 @@ Now generate the COMPLETE report with all placeholders filled:
         "templateId": template.template_id,
         "highlights": list(set(highlights)),
         "similar_cases": similar_cases,
-        "report_id": report_id
+        "report_id": report_id,
+        "critical_findings": critical_results if critical_results['has_critical'] else None
     }
 
     # Cache the result

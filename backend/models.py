@@ -9,6 +9,18 @@ class UserRole(str, enum.Enum):
     DOCTOR = "doctor"
     RADIOLOGIST = "radiologist"
 
+class NotificationStatus(str, enum.Enum):
+    PENDING = "pending"
+    SENT = "sent"
+    READ = "read"
+    ACKNOWLEDGED = "acknowledged"
+    ESCALATED = "escalated"
+
+class NotificationPriority(str, enum.Enum):
+    CRITICAL = "critical"
+    URGENT = "urgent"
+    HIGH = "high"
+
 class Template(Base):
     __tablename__ = "templates"
 
@@ -102,6 +114,48 @@ class User(Base):
     # Relationships
     reports = relationship("Report", back_populates="user")
     created_templates = relationship("Template", foreign_keys="Template.created_by_user_id", back_populates="created_by")
+    sent_notifications = relationship("CriticalNotification", foreign_keys="CriticalNotification.sent_by_user_id", back_populates="sent_by")
+    received_notifications = relationship("CriticalNotification", foreign_keys="CriticalNotification.recipient_user_id", back_populates="recipient")
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"
+
+class CriticalNotification(Base):
+    """Track critical findings notifications for patient safety"""
+    __tablename__ = "critical_notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    report_id = Column(Integer, ForeignKey("reports.id"), nullable=False)
+    sent_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # Radiologist who sent
+    recipient_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Referring physician
+    recipient_email = Column(String(200), nullable=False)  # Email to send to
+    recipient_phone = Column(String(50), nullable=True)  # Optional SMS
+
+    # Critical findings
+    critical_findings = Column(JSON, nullable=False)  # List of detected critical findings
+    priority = Column(SQLEnum(NotificationPriority), default=NotificationPriority.CRITICAL, nullable=False)
+
+    # Notification tracking
+    status = Column(SQLEnum(NotificationStatus), default=NotificationStatus.PENDING, nullable=False)
+    sent_at = Column(DateTime, nullable=True)
+    read_at = Column(DateTime, nullable=True)
+    acknowledged_at = Column(DateTime, nullable=True)
+    acknowledgment_note = Column(Text, nullable=True)
+
+    # Escalation
+    escalated_at = Column(DateTime, nullable=True)
+    escalated_to_email = Column(String(200), nullable=True)
+    escalation_reason = Column(Text, nullable=True)
+
+    # Metadata
+    notification_method = Column(String(50), nullable=True)  # email, sms, both
+    email_subject = Column(String(500), nullable=True)
+    email_body = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    report = relationship("Report")
+    sent_by = relationship("User", foreign_keys=[sent_by_user_id], back_populates="sent_notifications")
+    recipient = relationship("User", foreign_keys=[recipient_user_id], back_populates="received_notifications")
