@@ -5,6 +5,18 @@ from sqlalchemy import text
 from database import engine, SessionLocal
 from models import Base
 
+def column_exists(conn, table_name, column_name):
+    """Check if a column exists in a table"""
+    result = conn.execute(text("""
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = :table_name
+            AND column_name = :column_name
+        )
+    """), {"table_name": table_name, "column_name": column_name})
+    return result.scalar()
+
 def migrate_database():
     """Add new columns to existing tables"""
     print("=" * 60)
@@ -20,102 +32,101 @@ def migrate_database():
             print("\n📊 Updating 'reports' table...")
 
             # Add user_id column if it doesn't exist
-            try:
+            if not column_exists(conn, 'reports', 'user_id'):
                 conn.execute(text("""
                     ALTER TABLE reports
                     ADD COLUMN user_id INTEGER REFERENCES users(id)
                 """))
                 print("  ✓ Added user_id column")
-            except Exception as e:
-                if "already exists" in str(e) or "duplicate column" in str(e).lower():
-                    print("  ⚠ user_id column already exists, skipping")
-                else:
-                    raise
+            else:
+                print("  ⚠ user_id column already exists, skipping")
 
             # Add modality column if it doesn't exist
-            try:
+            if not column_exists(conn, 'reports', 'modality'):
                 conn.execute(text("""
                     ALTER TABLE reports
                     ADD COLUMN modality VARCHAR(50)
                 """))
                 print("  ✓ Added modality column")
-            except Exception as e:
-                if "already exists" in str(e) or "duplicate column" in str(e).lower():
-                    print("  ⚠ modality column already exists, skipping")
-                else:
-                    raise
+            else:
+                print("  ⚠ modality column already exists, skipping")
 
-            # Add indexes on new columns
-            try:
-                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_reports_modality ON reports(modality)"))
-                print("  ✓ Added index on modality")
-            except Exception as e:
-                print(f"  ⚠ Index creation skipped: {e}")
+            # Add similar_cases_used column if it doesn't exist
+            if not column_exists(conn, 'reports', 'similar_cases_used'):
+                conn.execute(text("""
+                    ALTER TABLE reports
+                    ADD COLUMN similar_cases_used JSON
+                """))
+                print("  ✓ Added similar_cases_used column")
+            else:
+                print("  ⚠ similar_cases_used column already exists, skipping")
 
-            try:
-                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_reports_patient_name ON reports(patient_name)"))
-                print("  ✓ Added index on patient_name")
-            except Exception as e:
-                print(f"  ⚠ Index creation skipped: {e}")
+            # Add highlights column if it doesn't exist
+            if not column_exists(conn, 'reports', 'highlights'):
+                conn.execute(text("""
+                    ALTER TABLE reports
+                    ADD COLUMN highlights JSON
+                """))
+                print("  ✓ Added highlights column")
+            else:
+                print("  ⚠ highlights column already exists, skipping")
 
-            try:
-                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_reports_created_at ON reports(created_at)"))
-                print("  ✓ Added index on created_at")
-            except Exception as e:
-                print(f"  ⚠ Index creation skipped: {e}")
+            # Add indexes on new columns (CREATE INDEX IF NOT EXISTS is safe)
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_reports_modality ON reports(modality)"))
+            print("  ✓ Created index on modality")
+
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_reports_patient_name ON reports(patient_name)"))
+            print("  ✓ Created index on patient_name")
+
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_reports_created_at ON reports(created_at)"))
+            print("  ✓ Created index on created_at")
+
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_reports_user_id ON reports(user_id)"))
+            print("  ✓ Created index on user_id")
 
             # Check and add columns to templates table
             print("\n📝 Updating 'templates' table...")
 
             # Add created_by_user_id column if it doesn't exist
-            try:
+            if not column_exists(conn, 'templates', 'created_by_user_id'):
                 conn.execute(text("""
                     ALTER TABLE templates
                     ADD COLUMN created_by_user_id INTEGER REFERENCES users(id)
                 """))
                 print("  ✓ Added created_by_user_id column")
-            except Exception as e:
-                if "already exists" in str(e) or "duplicate column" in str(e).lower():
-                    print("  ⚠ created_by_user_id column already exists, skipping")
-                else:
-                    raise
+            else:
+                print("  ⚠ created_by_user_id column already exists, skipping")
 
             # Add is_system_template column if it doesn't exist
-            try:
+            if not column_exists(conn, 'templates', 'is_system_template'):
                 conn.execute(text("""
                     ALTER TABLE templates
                     ADD COLUMN is_system_template BOOLEAN DEFAULT TRUE
                 """))
                 print("  ✓ Added is_system_template column")
-            except Exception as e:
-                if "already exists" in str(e) or "duplicate column" in str(e).lower():
-                    print("  ⚠ is_system_template column already exists, skipping")
-                else:
-                    raise
+            else:
+                print("  ⚠ is_system_template column already exists, skipping")
 
             # Add is_shared column if it doesn't exist
-            try:
+            if not column_exists(conn, 'templates', 'is_shared'):
                 conn.execute(text("""
                     ALTER TABLE templates
                     ADD COLUMN is_shared BOOLEAN DEFAULT FALSE
                 """))
                 print("  ✓ Added is_shared column")
-            except Exception as e:
-                if "already exists" in str(e) or "duplicate column" in str(e).lower():
-                    print("  ⚠ is_shared column already exists, skipping")
-                else:
-                    raise
+            else:
+                print("  ⚠ is_shared column already exists, skipping")
 
             # Update existing templates to be marked as system templates
-            try:
-                result = conn.execute(text("""
-                    UPDATE templates
-                    SET is_system_template = TRUE
-                    WHERE created_by_user_id IS NULL
-                """))
+            result = conn.execute(text("""
+                UPDATE templates
+                SET is_system_template = TRUE
+                WHERE created_by_user_id IS NULL AND is_system_template IS NULL
+            """))
+            if result.rowcount > 0:
                 print(f"  ✓ Marked {result.rowcount} existing templates as system templates")
-            except Exception as e:
-                print(f"  ⚠ Update skipped: {e}")
+            else:
+                print("  ℹ All templates already properly marked")
 
             # Commit transaction
             trans.commit()
