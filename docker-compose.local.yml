@@ -17,7 +17,7 @@ services:
     networks:
       - radiology-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-radiology_user}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-radiology_user} -d ${POSTGRES_DB:-radiology_templates}"]
       interval: 10s
       timeout: 5s
       retries: 5
