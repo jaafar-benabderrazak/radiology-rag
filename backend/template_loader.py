@@ -268,5 +268,293 @@ Impression:
 
 Signed electronically by {doctor_name}, {study_datetime}
 """
+    },
+    {
+        "template_id": "ct_head_stroke",
+        "title": "CT Head – Acute Stroke Protocol",
+        "keywords": ["ct brain", "stroke", "cva", "head ct", "acute", "neuro"],
+        "category": "CT",
+        "skeleton": """Radiology Report
+Referring Physician: {referrer}
+Reporting Radiologist: {doctor_name}
+
+Patient: {patient_name}
+Study: CT Head Non-Contrast
+Study Date/Time: {study_datetime}
+Accession/ID: {accession}
+
+Indication:
+{indication}
+
+Technique:
+Non-contrast axial CT from skull base to vertex.
+
+Findings:
+• Gray-white differentiation: <fill>
+• Hemorrhage: <fill>
+• Ventricles and cisterns: <fill>
+• Mass effect/midline shift: <fill>
+• Skull and calvarium: Intact
+• Visualized paranasal sinuses: <fill>
+
+Impression:
+1) <main conclusion>
+
+ASPECTS Score (if applicable): <score>/10
+
+Signed electronically by {doctor_name}, {study_datetime}
+"""
+    },
+    {
+        "template_id": "mri_brain_dementia",
+        "title": "MRI Brain – Dementia/Cognitive Decline",
+        "keywords": ["mri brain", "dementia", "alzheimer", "cognitive", "memory loss"],
+        "category": "IRM",
+        "skeleton": """Radiology Report
+Referring Physician: {referrer}
+Reporting Radiologist: {doctor_name}
+
+Patient: {patient_name}
+Study: MRI Brain
+Study Date/Time: {study_datetime}
+Accession/ID: {accession}
+
+Indication:
+{indication}
+
+Technique:
+Multiplanar, multisequence MRI including T1, T2, FLAIR, DWI.
+
+Findings:
+• Cerebral volume: <fill>
+• Hippocampal volume: <fill>
+• White matter changes: <fill>
+• Gray matter: <fill>
+• Vascular changes: <fill>
+• Focal lesions: <fill>
+
+Impression:
+1) <main conclusion>
+
+Signed electronically by {doctor_name}, {study_datetime}
+"""
+    },
+    {
+        "template_id": "ct_abdomen_pelvis",
+        "title": "CT Abdomen/Pelvis with Contrast",
+        "keywords": ["ct abdomen", "ct pelvis", "abdominal pain", "contrast"],
+        "category": "CT",
+        "skeleton": """Radiology Report
+Referring Physician: {referrer}
+Reporting Radiologist: {doctor_name}
+
+Patient: {patient_name}
+Study: CT Abdomen and Pelvis with IV Contrast
+Study Date/Time: {study_datetime}
+Accession/ID: {accession}
+
+Indication:
+{indication}
+
+Technique:
+Multidetector CT following IV contrast administration.
+
+Findings:
+• Liver: <fill>
+• Gallbladder: <fill>
+• Pancreas: <fill>
+• Spleen: <fill>
+• Kidneys: <fill>
+• Bowel: <fill>
+• Bladder: <fill>
+• Appendix: <fill>
+• Vasculature: <fill>
+• Lymph nodes: <fill>
+• Bones: <fill>
+
+Impression:
+1) <main conclusion>
+
+Signed electronically by {doctor_name}, {study_datetime}
+"""
+    },
+    {
+        "template_id": "mri_spine_lumbar",
+        "title": "MRI Lumbar Spine – Back Pain",
+        "keywords": ["mri spine", "lumbar", "back pain", "sciatica", "radiculopathy"],
+        "category": "IRM",
+        "skeleton": """Radiology Report
+Referring Physician: {referrer}
+Reporting Radiologist: {doctor_name}
+
+Patient: {patient_name}
+Study: MRI Lumbar Spine
+Study Date/Time: {study_datetime}
+Accession/ID: {accession}
+
+Indication:
+{indication}
+
+Technique:
+Multiplanar, multisequence MRI of the lumbar spine.
+
+Findings:
+Vertebral bodies: <fill>
+Disc spaces:
+• L1-L2: <fill>
+• L2-L3: <fill>
+• L3-L4: <fill>
+• L4-L5: <fill>
+• L5-S1: <fill>
+
+Spinal canal: <fill>
+Neural foramina: <fill>
+Facet joints: <fill>
+Paraspinal soft tissues: <fill>
+
+Impression:
+1) <main conclusion>
+
+Signed electronically by {doctor_name}, {study_datetime}
+"""
+    },
+    {
+        "template_id": "us_abdomen_general",
+        "title": "Ultrasound Abdomen – General",
+        "keywords": ["ultrasound", "echo", "abdomen", "us", "liver", "gallbladder"],
+        "category": "Ultrasound",
+        "skeleton": """Radiology Report
+Referring Physician: {referrer}
+Reporting Radiologist: {doctor_name}
+
+Patient: {patient_name}
+Study: Ultrasound Abdomen
+Study Date/Time: {study_datetime}
+Accession/ID: {accession}
+
+Indication:
+{indication}
+
+Technique:
+Real-time ultrasound of the abdomen.
+
+Findings:
+• Liver: <fill>
+• Gallbladder: <fill>
+• Bile ducts: <fill>
+• Pancreas: <fill>
+• Spleen: <fill>
+• Kidneys: <fill>
+• Aorta: <fill>
+• Ascites: <fill>
+
+Impression:
+1) <main conclusion>
+
+Signed electronically by {doctor_name}, {study_datetime}
+"""
+    },
+    {
+        "template_id": "xray_abdomen_obstruction",
+        "title": "Abdominal X-ray – Bowel Obstruction",
+        "keywords": ["abdominal xray", "kub", "obstruction", "bowel", "ileus"],
+        "category": "X-Ray",
+        "skeleton": """Radiology Report
+Referring Physician: {referrer}
+Reporting Radiologist: {doctor_name}
+
+Patient: {patient_name}
+Study: Abdominal X-ray (Supine/Upright)
+Study Date/Time: {study_datetime}
+Accession/ID: {accession}
+
+Indication:
+{indication}
+
+Findings:
+• Bowel gas pattern: <fill>
+• Dilated loops: <fill>
+• Air-fluid levels: <fill>
+• Free air: <fill>
+• Soft tissues: <fill>
+• Bones: <fill>
+
+Impression:
+1) <main conclusion>
+
+Signed electronically by {doctor_name}, {study_datetime}
+"""
+    },
+    {
+        "template_id": "ct_chest_lung_nodule",
+        "title": "CT Chest – Lung Nodule Follow-up",
+        "keywords": ["ct chest", "lung nodule", "pulmonary nodule", "screening"],
+        "category": "CT",
+        "skeleton": """Radiology Report
+Referring Physician: {referrer}
+Reporting Radiologist: {doctor_name}
+
+Patient: {patient_name}
+Study: CT Chest
+Study Date/Time: {study_datetime}
+Accession/ID: {accession}
+
+Indication:
+{indication}
+
+Technique:
+Thin-section CT of the chest.
+
+Findings:
+• Nodules: <fill>
+• Lungs: <fill>
+• Mediastinum: <fill>
+• Lymph nodes: <fill>
+• Pleura: <fill>
+• Chest wall: <fill>
+
+Impression:
+1) <main conclusion>
+2) Lung-RADS Category: <category>
+
+Signed electronically by {doctor_name}, {study_datetime}
+"""
+    },
+    {
+        "template_id": "mri_knee_meniscus",
+        "title": "MRI Knee – Meniscal Tear/Ligament Injury",
+        "keywords": ["mri knee", "meniscus", "acl", "ligament", "joint"],
+        "category": "IRM",
+        "skeleton": """Radiology Report
+Referring Physician: {referrer}
+Reporting Radiologist: {doctor_name}
+
+Patient: {patient_name}
+Study: MRI Knee
+Study Date/Time: {study_datetime}
+Accession/ID: {accession}
+
+Indication:
+{indication}
+
+Technique:
+Multiplanar, multisequence MRI of the knee.
+
+Findings:
+• Medial meniscus: <fill>
+• Lateral meniscus: <fill>
+• ACL: <fill>
+• PCL: <fill>
+• MCL: <fill>
+• LCL: <fill>
+• Articular cartilage: <fill>
+• Joint effusion: <fill>
+• Bone marrow: <fill>
+
+Impression:
+1) <main conclusion>
+
+Signed electronically by {doctor_name}, {study_datetime}
+"""
     }
 ]
