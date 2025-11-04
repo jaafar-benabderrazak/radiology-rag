@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { ReportSummary, ReportDetail, ReportStats } from '../lib/api'
 import * as api from '../lib/api'
 
@@ -6,10 +6,14 @@ export default function ReportHistory() {
   const [reports, setReports] = useState<ReportSummary[]>([])
   const [stats, setStats] = useState<ReportStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedReport, setSelectedReport] = useState<ReportDetail | null>(null)
+  const [loadingReport, setLoadingReport] = useState(false)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [modalityFilter, setModalityFilter] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -17,30 +21,52 @@ export default function ReportHistory() {
   // Pagination
   const [page, setPage] = useState(0)
   const [limit] = useState(20)
+  const [hasMore, setHasMore] = useState(true)
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+      setPage(0) // Reset to first page on search
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0)
+  }, [modalityFilter, startDate, endDate])
 
   useEffect(() => {
     loadReports()
+  }, [page, debouncedSearch, modalityFilter, startDate, endDate])
+
+  useEffect(() => {
     loadStats()
-  }, [page, searchQuery, modalityFilter, startDate, endDate])
+  }, [])
 
   const loadReports = async () => {
     setLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams({
         skip: (page * limit).toString(),
         limit: limit.toString(),
       })
 
-      if (searchQuery) params.append('search', searchQuery)
+      if (debouncedSearch) params.append('search', debouncedSearch)
       if (modalityFilter) params.append('modality', modalityFilter)
       if (startDate) params.append('start_date', startDate)
       if (endDate) params.append('end_date', endDate)
 
       const data = await api.fetchReports(params)
       setReports(data)
+      setHasMore(data.length >= limit)
     } catch (error) {
       console.error('Failed to load reports:', error)
-      alert('Failed to load reports')
+      setError('Failed to load reports. Please try again.')
+      setReports([])
     } finally {
       setLoading(false)
     }
@@ -52,30 +78,43 @@ export default function ReportHistory() {
       setStats(data)
     } catch (error) {
       console.error('Failed to load stats:', error)
+      // Stats failure is not critical, don't show error
     }
   }
 
   const viewReport = async (reportId: number) => {
+    setLoadingReport(true)
     try {
       const report = await api.fetchReportDetail(reportId)
       setSelectedReport(report)
     } catch (error) {
       console.error('Failed to load report:', error)
-      alert('Failed to load report details')
+      setError('Failed to load report details. Please try again.')
+    } finally {
+      setLoadingReport(false)
     }
   }
 
-  const deleteReport = async (reportId: number) => {
-    if (!confirm('Are you sure you want to delete this report?')) return
+  const handleDeleteReport = async (reportId: number) => {
+    if (!confirm('Are you sure you want to delete this report? This action cannot be undone.')) return
 
+    setDeletingId(reportId)
     try {
       await api.deleteReport(reportId)
-      alert('Report deleted successfully')
-      loadReports()
-      loadStats()
+      // Success feedback
+      setReports(reports.filter(r => r.id !== reportId))
+      loadStats() // Refresh stats
+      // Show success message briefly
+      const successMsg = document.createElement('div')
+      successMsg.textContent = '✓ Report deleted successfully'
+      successMsg.style.cssText = 'position:fixed;top:20px;right:20px;background:#48bb78;color:white;padding:1rem 1.5rem;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:9999;animation:slideIn 0.3s ease-out'
+      document.body.appendChild(successMsg)
+      setTimeout(() => successMsg.remove(), 3000)
     } catch (error) {
       console.error('Failed to delete report:', error)
-      alert('Failed to delete report')
+      setError('Failed to delete report. You may not have permission.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -92,13 +131,37 @@ export default function ReportHistory() {
       }
     } catch (error) {
       console.error('Failed to export report:', error)
-      alert('Failed to export report')
+      setError('Failed to export report. Please try again.')
     }
+  }
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setModalityFilter('')
+    setStartDate('')
+    setEndDate('')
+    setPage(0)
   }
 
   return (
     <div className="report-history-container">
-      <h1 className="page-title">Report History</h1>
+      <div className="page-header">
+        <h1 className="page-title">📚 Report History</h1>
+        {stats && (
+          <div className="quick-stats">
+            <span className="quick-stat">{stats.total_reports} total</span>
+          </div>
+        )}
+      </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="error-banner">
+          <span className="error-icon">⚠️</span>
+          <span>{error}</span>
+          <button className="error-close" onClick={() => setError(null)}>✕</button>
+        </div>
+      )}
 
       {/* Statistics Dashboard */}
       {stats && (
@@ -161,13 +224,8 @@ export default function ReportHistory() {
           onChange={(e) => setEndDate(e.target.value)}
         />
 
-        <button className="btn-clear-filters" onClick={() => {
-          setSearchQuery('')
-          setModalityFilter('')
-          setStartDate('')
-          setEndDate('')
-        }}>
-          Clear Filters
+        <button className="btn-clear-filters" onClick={clearFilters}>
+          🔄 Clear Filters
         </button>
       </div>
 
@@ -212,8 +270,9 @@ export default function ReportHistory() {
                       className="btn-icon view"
                       onClick={() => viewReport(report.id)}
                       title="View Report"
+                      disabled={loadingReport}
                     >
-                      👁️
+                      {loadingReport ? '⏳' : '👁️'}
                     </button>
                     <button
                       className="btn-icon export"
@@ -224,10 +283,11 @@ export default function ReportHistory() {
                     </button>
                     <button
                       className="btn-icon delete"
-                      onClick={() => deleteReport(report.id)}
+                      onClick={() => handleDeleteReport(report.id)}
                       title="Delete Report"
+                      disabled={deletingId === report.id}
                     >
-                      🗑️
+                      {deletingId === report.id ? '⏳' : '🗑️'}
                     </button>
                   </td>
                 </tr>
@@ -328,11 +388,75 @@ export default function ReportHistory() {
           margin: 0 auto;
         }
 
+        .page-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+        }
+
         .page-title {
           font-size: 2rem;
           font-weight: 700;
           color: #1a202c;
-          margin-bottom: 2rem;
+          margin: 0;
+        }
+
+        .quick-stats {
+          display: flex;
+          gap: 1rem;
+        }
+
+        .quick-stat {
+          padding: 0.5rem 1rem;
+          background: white;
+          border-radius: 20px;
+          font-weight: 600;
+          color: #667eea;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .error-banner {
+          background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+          color: #742a2a;
+          padding: 1rem 1.5rem;
+          margin-bottom: 1.5rem;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          box-shadow: 0 4px 12px rgba(254, 178, 178, 0.5);
+          animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .error-icon {
+          font-size: 1.5rem;
+        }
+
+        .error-close {
+          margin-left: auto;
+          background: none;
+          border: none;
+          font-size: 1.5rem;
+          color: #742a2a;
+          cursor: pointer;
+          opacity: 0.7;
+          transition: opacity 0.2s;
+        }
+
+        .error-close:hover {
+          opacity: 1;
         }
 
         .stats-grid {
