@@ -3,6 +3,7 @@ import App from './App'
 import ReportHistory from './components/ReportHistory'
 import TemplateBuilder from './components/TemplateBuilder'
 import { getCurrentUser, type User } from './lib/api'
+import { useTheme } from './contexts/ThemeContext'
 
 type View = 'generator' | 'history' | 'templates'
 
@@ -11,6 +12,7 @@ export default function MainApp() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { theme, toggleTheme } = useTheme()
 
   useEffect(() => {
     // Try to load current user if authenticated
@@ -86,6 +88,14 @@ export default function MainApp() {
               <span className="nav-link-icon">🔧</span>
               <span className="nav-link-text">Template Builder</span>
             </button>
+            <button
+              className="theme-toggle"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            >
+              <span className="theme-icon">{theme === 'light' ? '🌙' : '☀️'}</span>
+            </button>
           </div>
         </div>
       </nav>
@@ -107,7 +117,7 @@ export default function MainApp() {
       <style>{`
         .main-app {
           min-height: 100vh;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
         }
 
         .loading-container {
@@ -133,14 +143,14 @@ export default function MainApp() {
         }
 
         .loading-text {
-          color: white;
+          color: var(--text-primary);
           font-size: 1.2rem;
           font-weight: 600;
         }
 
         .main-nav {
-          background: rgba(255, 255, 255, 0.98);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+          background: var(--nav-bg);
+          box-shadow: 0 4px 20px var(--nav-shadow);
           position: sticky;
           top: 0;
           z-index: 100;
@@ -193,9 +203,9 @@ export default function MainApp() {
         .nav-title {
           font-size: 1.5rem;
           font-weight: 700;
-          color: #1a202c;
+          color: var(--text-primary);
           margin: 0;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: var(--button-primary-bg);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -206,16 +216,16 @@ export default function MainApp() {
           align-items: center;
           gap: 0.75rem;
           padding: 0.5rem 1rem;
-          background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+          background: var(--user-info-bg);
           border-radius: 50px;
-          border: 2px solid #e2e8f0;
+          border: 2px solid var(--border-color);
         }
 
         .user-avatar {
           width: 40px;
           height: 40px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: var(--avatar-bg);
           color: white;
           display: flex;
           align-items: center;
@@ -233,12 +243,12 @@ export default function MainApp() {
         .user-name {
           font-size: 0.9rem;
           font-weight: 600;
-          color: #2d3748;
+          color: var(--text-primary);
         }
 
         .user-role {
           font-size: 0.75rem;
-          color: #718096;
+          color: var(--text-tertiary);
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
@@ -256,7 +266,7 @@ export default function MainApp() {
           border-radius: 10px;
           font-size: 1rem;
           font-weight: 600;
-          color: #4a5568;
+          color: var(--text-secondary);
           cursor: pointer;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           white-space: nowrap;
@@ -271,7 +281,7 @@ export default function MainApp() {
         }
 
         .nav-link:hover {
-          background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+          background: var(--hover-bg);
           color: #667eea;
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
@@ -282,14 +292,40 @@ export default function MainApp() {
         }
 
         .nav-link.active {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: var(--button-primary-bg);
           color: white;
           border-color: transparent;
-          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+          box-shadow: 0 4px 15px var(--button-primary-shadow);
         }
 
         .nav-link.active .nav-link-icon {
           transform: scale(1.1);
+        }
+
+        .theme-toggle {
+          padding: 0.75rem;
+          background: transparent;
+          border: 2px solid var(--border-color);
+          border-radius: 50%;
+          font-size: 1rem;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 50px;
+          height: 50px;
+        }
+
+        .theme-toggle:hover {
+          background: var(--hover-bg);
+          transform: translateY(-2px) rotate(20deg);
+          box-shadow: 0 4px 12px var(--nav-shadow);
+        }
+
+        .theme-icon {
+          font-size: 1.3rem;
+          transition: transform 0.3s ease;
         }
 
         .main-content-wrapper {
@@ -301,15 +337,15 @@ export default function MainApp() {
           position: sticky;
           top: 80px;
           z-index: 50;
-          background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
-          color: #742a2a;
+          background: var(--error-bg);
+          color: var(--error-text);
           padding: 1rem 1.5rem;
           display: flex;
           align-items: center;
           gap: 1rem;
           margin: 1rem;
           border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(254, 178, 178, 0.5);
+          box-shadow: 0 4px 12px var(--error-shadow);
           animation: slideDown 0.3s ease-out;
         }
 
@@ -333,7 +369,7 @@ export default function MainApp() {
           background: none;
           border: none;
           font-size: 1.5rem;
-          color: #742a2a;
+          color: var(--error-text);
           cursor: pointer;
           opacity: 0.7;
           transition: opacity 0.2s;
