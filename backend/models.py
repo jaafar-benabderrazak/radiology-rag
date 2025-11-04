@@ -20,18 +20,26 @@ class Template(Base):
     category = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
     formatting_metadata = Column(Text, nullable=True)  # JSON string with formatting info
+
+    # Custom template tracking
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Null for system templates
+    is_system_template = Column(Boolean, default=True)  # False for user-created templates
+    is_shared = Column(Boolean, default=False)  # Allow sharing custom templates
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationship to reports
+    # Relationships
     reports = relationship("Report", back_populates="template")
+    created_by = relationship("User", foreign_keys=[created_by_user_id], back_populates="created_templates")
 
 class Report(Base):
     __tablename__ = "reports"
 
     id = Column(Integer, primary_key=True, index=True)
     template_id = Column(Integer, ForeignKey("templates.id"), nullable=False)
-    patient_name = Column(String(200), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Track who created it
+    patient_name = Column(String(200), nullable=True, index=True)  # Added index for search
     accession = Column(String(100), nullable=True, index=True)
     doctor_name = Column(String(200), nullable=True)
     hospital_name = Column(String(200), nullable=True)
@@ -39,6 +47,7 @@ class Report(Base):
     indication = Column(Text, nullable=False)  # Original input text
     generated_report = Column(Text, nullable=False)
     study_datetime = Column(String(100), nullable=True)
+    modality = Column(String(50), nullable=True, index=True)  # CT, MRI, X-Ray, etc. for filtering
 
     # AI Analysis fields
     ai_summary = Column(Text, nullable=True)  # AI-generated concise summary
@@ -50,11 +59,16 @@ class Report(Base):
     validation_warnings = Column(JSON, nullable=True)  # List of warnings
     validation_details = Column(JSON, nullable=True)  # Additional validation info
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    # RAG context
+    similar_cases_used = Column(JSON, nullable=True)  # Store similar cases that were used
+    highlights = Column(JSON, nullable=True)  # Store highlighted phrases
+
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)  # Added index for date filtering
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationship to template
+    # Relationships
     template = relationship("Template", back_populates="reports")
+    user = relationship("User", back_populates="reports")
 
 class SimilarCase(Base):
     __tablename__ = "similar_cases"
@@ -84,6 +98,10 @@ class User(Base):
     is_verified = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    reports = relationship("Report", back_populates="user")
+    created_templates = relationship("Template", foreign_keys="Template.created_by_user_id", back_populates="created_by")
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"
