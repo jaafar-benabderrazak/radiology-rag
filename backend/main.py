@@ -20,7 +20,7 @@ from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
 from ai_analysis_service import ai_analysis_service
 from auth import get_current_active_user
-from routers import auth_router, users_router, reports_router, templates_router, suggestions_router, notifications_router
+from routers import auth_router, users_router, reports_router, templates_router, suggestions_router, notifications_router, backup_router
 from critical_findings_detector import critical_detector
 from notification_service import notification_service
 
@@ -49,6 +49,7 @@ app.include_router(reports_router.router)
 app.include_router(templates_router.router)
 app.include_router(suggestions_router.router)
 app.include_router(notifications_router.router)
+app.include_router(backup_router.router)
 
 # Create tables on startup
 @app.on_event("startup")
