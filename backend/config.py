@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     CACHE_ENABLED: bool = os.getenv("CACHE_ENABLED", "true").lower() == "true"
     CACHE_TTL: int = int(os.getenv("CACHE_TTL", "3600"))  # 1 hour
 
+    # Authentication settings
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production-use-openssl-rand-hex-32")
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+
     class Config:
         case_sensitive = True
 
