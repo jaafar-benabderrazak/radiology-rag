@@ -20,7 +20,7 @@ from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
 from ai_analysis_service import ai_analysis_service
 from auth import get_current_active_user
-from routers import auth_router, users_router
+from routers import auth_router, users_router, reports_router, templates_router, suggestions_router
 
 # Configure Gemini
 if not settings.GEMINI_API_KEY:
@@ -41,6 +41,11 @@ app.add_middleware(
 # Include authentication routers
 app.include_router(auth_router.router)
 app.include_router(users_router.router)
+
+# Include new feature routers
+app.include_router(reports_router.router)
+app.include_router(templates_router.router)
+app.include_router(suggestions_router.router)
 
 # Create tables on startup
 @app.on_event("startup")
@@ -329,11 +334,22 @@ Now generate the COMPLETE report with all placeholders filled:
             if 5 < len(phrase) < 150:  # Reasonable length
                 highlights.append(phrase)
 
+    # Extract modality from template category or title
+    modality = template.category if template.category else None
+    if not modality:
+        # Try to extract from title (e.g., "CT Head", "MRI Brain", etc.)
+        title_upper = template.title.upper()
+        for mod in ["CT", "MRI", "X-RAY", "ULTRASOUND", "PET"]:
+            if mod in title_upper:
+                modality = mod
+                break
+
     # Save report to database
     report_id = None
     try:
         report = Report(
             template_id=template.id,
+            user_id=current_user.id,  # Track who created it
             patient_name=meta.patient_name,
             accession=meta.accession,
             doctor_name=meta.doctorName,
@@ -341,12 +357,16 @@ Now generate the COMPLETE report with all placeholders filled:
             referrer=meta.referrer,
             indication=req.input,
             generated_report=report_text,
-            study_datetime=meta.study_datetime
+            study_datetime=meta.study_datetime,
+            modality=modality,  # Add modality for filtering
+            similar_cases_used=similar_cases,  # Store RAG context
+            highlights=list(set(highlights))  # Store highlights
         )
         db.add(report)
         db.commit()
         db.refresh(report)  # Get the generated ID
         report_id = report.id
+        print(f"✓ Report saved with ID: {report_id}")
     except Exception as e:
         print(f"Error saving report: {e}")
         db.rollback()
