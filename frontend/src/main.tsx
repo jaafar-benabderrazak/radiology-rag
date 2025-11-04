@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './App'
+import MainApp from './MainApp'
 import { AuthProvider } from './contexts/AuthContext'
 import { AuthWrapper } from './components/auth/AuthWrapper'
 
@@ -8,7 +8,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthProvider>
       <AuthWrapper>
-        <App />
+        <MainApp />
       </AuthWrapper>
     </AuthProvider>
   </React.StrictMode>,
