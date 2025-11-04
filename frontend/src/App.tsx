@@ -11,6 +11,7 @@ import {
   type SummaryResult,
   type ValidationResult
 } from "./lib/api"
+import VoiceDictation from "./components/VoiceDictation"
 
 // Language interface
 type Language = 'en' | 'fr'
@@ -525,6 +526,13 @@ export default function App() {
                 rows={8}
               />
             </div>
+
+            {/* Voice Dictation with Whisper AI */}
+            <VoiceDictation
+              onTranscription={(text) => setInputText((prev) => prev + (prev ? '\n\n' : '') + text)}
+              language={language === 'fr' ? 'fr' : 'en'}
+              specialty="radiology"
+            />
 
             {/* Metadata Section */}
             <details className="metadata-section">
