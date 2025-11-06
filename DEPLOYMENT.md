@@ -1,660 +1,629 @@
-# Radiology RAG - Production Deployment Guide
+# Radiology RAG - Deployment Guide
 
-This guide covers deploying the Radiology RAG application to production with HTTPS/SSL support.
+Complete guide to deploy the Radiology RAG application to production.
 
 ## Table of Contents
 
-1. [Quick Start](#quick-start)
-2. [Prerequisites](#prerequisites)
-3. [Server Setup](#server-setup)
-4. [Deployment Steps](#deployment-steps)
-5. [Cloud Platform Guides](#cloud-platform-guides)
-6. [SSL/HTTPS Setup](#sslhttps-setup)
-7. [Monitoring & Maintenance](#monitoring--maintenance)
-8. [Troubleshooting](#troubleshooting)
-9. [Security Best Practices](#security-best-practices)
+1. [Quick Deploy Options](#quick-deploy-options)
+2. [Railway Deployment (Recommended)](#railway-deployment-recommended)
+3. [Render Deployment](#render-deployment)
+4. [DigitalOcean Deployment](#digitalocean-deployment)
+5. [AWS Deployment](#aws-deployment)
+6. [Manual VPS Deployment](#manual-vps-deployment)
+7. [Environment Variables](#environment-variables)
+8. [SSL/HTTPS Setup](#sslhttps-setup)
 
-## Quick Start
+---
 
-For the impatient (but please read the full guide later):
+## Quick Deploy Options
+
+### Comparison
+
+| Platform | Cost | Ease | Docker Support | Free Tier | Best For |
+|----------|------|------|----------------|-----------|----------|
+| **Railway** | $5+/mo | ⭐⭐⭐⭐⭐ | ✅ Yes | $5 credit | Quick deploy |
+| **Render** | $7+/mo | ⭐⭐⭐⭐ | ✅ Yes | Limited | Startups |
+| **DigitalOcean** | $12+/mo | ⭐⭐⭐ | ✅ Yes | $200 credit | Production |
+| **Fly.io** | $5+/mo | ⭐⭐⭐⭐ | ✅ Yes | Limited | Docker apps |
+| **AWS** | $20+/mo | ⭐⭐ | ✅ Yes | 12mo free | Enterprise |
+
+---
+
+## Railway Deployment (Recommended)
+
+**Fastest and easiest deployment option**
+
+### Prerequisites
+- GitHub account
+- Railway account (https://railway.app/)
+- Your code pushed to GitHub
+
+### Step 1: Prepare Your Repository
 
 ```bash
-# 1. Clone and configure
-git clone https://github.com/yourusername/radiology-rag.git
+# Make sure latest code is pushed
+git add .
+git commit -m "Prepare for deployment"
+git push origin main
+```
+
+### Step 2: Deploy to Railway
+
+1. **Go to Railway**: https://railway.app/
+2. **Click "Start a New Project"**
+3. **Select "Deploy from GitHub repo"**
+4. **Choose your repository**: `radiology-rag`
+5. **Railway will auto-detect** the docker-compose.yml
+
+### Step 3: Configure Services
+
+Railway will create services for each container. Configure them:
+
+#### Backend Service
+```bash
+# Environment variables
+DATABASE_URL=${POSTGRES_URL}
+REDIS_URL=${REDIS_URL}
+QDRANT_URL=http://qdrant.railway.internal:6333
+GEMINI_API_KEY=your_gemini_api_key
+SECRET_KEY=your_super_secret_key_here_change_me
+ALLOWED_ORIGINS=https://your-app.railway.app
+ENVIRONMENT=production
+```
+
+#### Frontend Service
+```bash
+VITE_API_URL=https://your-backend.railway.app
+```
+
+### Step 4: Add Databases
+
+1. **Click "New" → "Database"**
+2. **Add PostgreSQL**
+3. **Add Redis**
+4. **Connect to Backend** (Railway auto-connects)
+
+### Step 5: Deploy
+
+1. **Click "Deploy"**
+2. **Wait 5-10 minutes** for build
+3. **Access your app** at the generated URL
+
+### Step 6: Custom Domain (Optional)
+
+1. **Go to Settings** → **Networking**
+2. **Click "Generate Domain"** or **Add Custom Domain**
+3. **Update** `ALLOWED_ORIGINS` with new domain
+
+---
+
+## Render Deployment
+
+### Step 1: Create Blueprint File
+
+Create `render.yaml` in your project root:
+
+```yaml
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: radiology-db
+    env: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+
+  # Redis
+  - type: redis
+    name: radiology-cache
+    plan: starter
+    region: oregon
+
+  # Backend
+  - type: web
+    name: radiology-backend
+    env: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: radiology-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: radiology-cache
+          type: redis
+          property: connectionString
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+
+  # Frontend
+  - type: web
+    name: radiology-frontend
+    env: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: radiology-backend
+          type: web
+          property: url
+
+databases:
+  - name: radiology-db
+    plan: starter
+    region: oregon
+
+  - name: radiology-cache
+    plan: starter
+    region: oregon
+```
+
+### Step 2: Deploy
+
+1. **Go to Render**: https://render.com/
+2. **New** → **Blueprint**
+3. **Connect repository**
+4. **Render auto-deploys** from render.yaml
+5. **Set environment variables**
+
+---
+
+## DigitalOcean Deployment
+
+### Option 1: App Platform (Easy)
+
+```bash
+# Install doctl CLI
+# Windows (PowerShell)
+choco install doctl
+
+# Login
+doctl auth init
+
+# Deploy
+doctl apps create --spec .do/app.yaml
+```
+
+Create `.do/app.yaml`:
+
+```yaml
+name: radiology-rag
+region: nyc
+services:
+  - name: backend
+    github:
+      repo: your-username/radiology-rag
+      branch: main
+      deploy_on_push: true
+    source_dir: /backend
+    dockerfile_path: backend/Dockerfile
+    envs:
+      - key: DATABASE_URL
+        scope: RUN_AND_BUILD_TIME
+        value: ${postgres.DATABASE_URL}
+      - key: GEMINI_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: your_key
+    health_check:
+      http_path: /health
+    routes:
+      - path: /api
+    
+  - name: frontend
+    github:
+      repo: your-username/radiology-rag
+      branch: main
+    source_dir: /frontend
+    dockerfile_path: frontend/Dockerfile
+    envs:
+      - key: VITE_API_URL
+        value: ${backend.PUBLIC_URL}
+    routes:
+      - path: /
+
+databases:
+  - name: postgres
+    engine: PG
+    version: "15"
+    
+  - name: redis
+    engine: REDIS
+    version: "7"
+```
+
+### Option 2: Droplet (Manual)
+
+```bash
+# 1. Create Droplet (Ubuntu 22.04)
+# Size: 4GB RAM minimum ($24/mo)
+
+# 2. SSH into droplet
+ssh root@your_droplet_ip
+
+# 3. Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+
+# 4. Install Docker Compose
+apt install docker-compose-plugin
+
+# 5. Clone repository
+git clone https://github.com/your-username/radiology-rag.git
 cd radiology-rag
-git checkout claude/setup-radiology-docker-services-011CUbfwqGA7BmujzTVkH5rG
 
-# 2. Configure environment
-cp .env.production.example .env.production
-nano .env.production  # Edit with your values
+# 6. Create .env file
+nano .env
+# Add your environment variables
 
-# 3. Deploy
-chmod +x scripts/*.sh
-./scripts/deploy.sh
+# 7. Deploy
+docker compose -f docker-compose.prod.yml up -d
 
-# 4. Setup SSL
-./scripts/setup-ssl.sh
+# 8. Setup nginx (already configured)
+# Your app is now running on port 80
 ```
 
-Access your application at: `https://yourdomain.com`
+---
 
-## Prerequisites
+## AWS Deployment
 
-### Server Requirements
+### Using AWS ECS (Elastic Container Service)
 
-**Minimum Specifications:**
-- **CPU:** 4 cores
-- **RAM:** 8 GB
-- **Storage:** 50 GB SSD
-- **OS:** Ubuntu 22.04 LTS (recommended) or any Linux with Docker support
-
-**Recommended Specifications:**
-- **CPU:** 8+ cores
-- **RAM:** 16+ GB
-- **Storage:** 100+ GB SSD
-- **OS:** Ubuntu 22.04 LTS
-
-### Required Software
-
-1. **Docker** (20.10+)
-   ```bash
-   curl -fsSL https://get.docker.com -o get-docker.sh
-   sudo sh get-docker.sh
-   sudo usermod -aG docker $USER
-   ```
-
-2. **Docker Compose** (2.0+)
-   ```bash
-   sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-   sudo chmod +x /usr/local/bin/docker-compose
-   ```
-
-3. **Git**
-   ```bash
-   sudo apt update
-   sudo apt install git -y
-   ```
-
-### Domain & DNS Setup
-
-1. **Purchase a domain** (e.g., from Namecheap, GoDaddy, Google Domains)
-
-2. **Configure DNS A Records:**
-   ```
-   Type    Name    Value              TTL
-   A       @       YOUR_SERVER_IP     3600
-   A       www     YOUR_SERVER_IP     3600
-   ```
-
-3. **Wait for DNS propagation** (can take up to 48 hours, usually 1-2 hours)
-   ```bash
-   # Verify DNS propagation
-   nslookup yourdomain.com
-   ```
-
-## Server Setup
-
-### 1. Initial Server Configuration
-
+1. **Install AWS CLI**:
 ```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
+# Windows
+choco install awscli
 
-# Install essential tools
-sudo apt install -y curl git nano ufw fail2ban
-
-# Configure firewall
-sudo ufw allow OpenSSH
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
-
-# Configure fail2ban (protection against brute force)
-sudo systemctl enable fail2ban
-sudo systemctl start fail2ban
+# Configure
+aws configure
 ```
 
-### 2. Create Deployment User
-
+2. **Create ECR Repositories**:
 ```bash
-# Create user
-sudo adduser radiology
-
-# Add to docker group
-sudo usermod -aG docker radiology
-
-# Switch to deployment user
-su - radiology
+aws ecr create-repository --repository-name radiology-backend
+aws ecr create-repository --repository-name radiology-frontend
 ```
 
-### 3. Clone Repository
-
+3. **Build and Push Images**:
 ```bash
-cd ~
-git clone https://github.com/yourusername/radiology-rag.git
+# Login to ECR
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
+
+# Build and push backend
+cd backend
+docker build -t radiology-backend .
+docker tag radiology-backend:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/radiology-backend:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/radiology-backend:latest
+
+# Build and push frontend
+cd ../frontend
+docker build -t radiology-frontend .
+docker tag radiology-frontend:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/radiology-frontend:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/radiology-frontend:latest
+```
+
+4. **Create ECS Cluster**:
+```bash
+aws ecs create-cluster --cluster-name radiology-cluster
+```
+
+5. **Create RDS Database**:
+```bash
+aws rds create-db-instance \
+  --db-instance-identifier radiology-db \
+  --db-instance-class db.t3.micro \
+  --engine postgres \
+  --master-username admin \
+  --master-user-password YourPassword123 \
+  --allocated-storage 20
+```
+
+6. **Deploy with CloudFormation** (use provided template)
+
+---
+
+## Manual VPS Deployment
+
+### Any VPS (Linode, Vultr, Hetzner, etc.)
+
+1. **Get a VPS**:
+   - 4GB RAM minimum
+   - 2 vCPUs
+   - 80GB SSD
+   - Ubuntu 22.04 LTS
+
+2. **SSH into server**:
+```bash
+ssh root@your_server_ip
+```
+
+3. **Update system**:
+```bash
+apt update && apt upgrade -y
+```
+
+4. **Install Docker**:
+```bash
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+```
+
+5. **Install Docker Compose**:
+```bash
+apt install docker-compose-plugin -y
+```
+
+6. **Clone repository**:
+```bash
+cd /opt
+git clone https://github.com/your-username/radiology-rag.git
 cd radiology-rag
-git checkout claude/setup-radiology-docker-services-011CUbfwqGA7BmujzTVkH5rG
 ```
 
-## Deployment Steps
-
-### Step 1: Configure Environment
-
+7. **Create environment file**:
 ```bash
-# Copy production environment template
-cp .env.production.example .env.production
-
-# Edit configuration
-nano .env.production
+nano .env
 ```
 
-**Required Configuration:**
-
+Paste:
 ```bash
-# Domain
-DOMAIN=yourdomain.com
-FRONTEND_API_URL=https://api.yourdomain.com
+# Database
+POSTGRES_USER=radiology_user
+POSTGRES_PASSWORD=your_secure_password_here
+POSTGRES_DB=radiology_templates
 
-# Database - CHANGE THESE!
-POSTGRES_PASSWORD=your_secure_db_password_here
-REDIS_PASSWORD=your_secure_redis_password_here
-
-# AI API Key - REQUIRED
+# API Keys
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# Security
+SECRET_KEY=your_super_secret_key_min_32_characters_long
+
+# URLs
+ALLOWED_ORIGINS=http://your-domain.com,https://your-domain.com
+VITE_API_URL=http://your-domain.com
+
+# Environment
+ENVIRONMENT=production
 ```
 
-**Get Gemini API Key:**
-1. Visit https://makersuite.google.com/app/apikey
-2. Create a new API key
-3. Copy and paste into `.env.production`
+8. **Deploy**:
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
 
-### Step 2: Update Nginx Configuration
+9. **Check status**:
+```bash
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs -f
+```
+
+10. **Setup firewall**:
+```bash
+ufw allow 22   # SSH
+ufw allow 80   # HTTP
+ufw allow 443  # HTTPS
+ufw enable
+```
+
+---
+
+## Environment Variables
+
+### Required
 
 ```bash
-# Edit nginx configuration with your domain
-nano nginx/conf.d/radiology.conf
+# Database
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+POSTGRES_USER=radiology_user
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=radiology_templates
 
-# Replace all instances of yourdomain.com with your actual domain
-# Use Ctrl+\ in nano for find and replace
+# Redis
+REDIS_URL=redis://redis:6379
+
+# Vector Database
+QDRANT_URL=http://qdrant:6333
+
+# API Keys
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Security
+SECRET_KEY=your_super_secret_key_here_min_32_chars
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+ALGORITHM=HS256
+
+# CORS
+ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
+
+# Environment
+ENVIRONMENT=production
 ```
 
-### Step 3: Deploy Application
+### Optional
 
 ```bash
-# Make scripts executable
-chmod +x scripts/*.sh
+# SMTP (for notifications)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
 
-# Run deployment
-./scripts/deploy.sh
+# Backup
+BACKUP_ENABLED=true
+BACKUP_DIR=/app/backups
+BACKUP_RETENTION_DAYS=30
+
+# Voice Dictation
+VOICE_DICTATION_ENABLED=true
+WHISPER_MODEL=base
+
+# DICOM
+DICOM_ENABLED=true
+DICOM_UPLOAD_DIR=/app/dicom_storage
+DICOM_MAX_FILE_SIZE=104857600
 ```
 
-This will:
-- Pull latest code
-- Build Docker images
-- Start all services
-- Initialize database
-- Create default users
-
-**Monitor deployment:**
-```bash
-# Watch logs
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Check service status
-docker-compose -f docker-compose.prod.yml ps
-```
-
-### Step 4: Setup SSL/HTTPS
-
-**Important:** Wait for DNS propagation before running this!
-
-```bash
-# Test DNS first
-nslookup yourdomain.com
-
-# Setup SSL (production certificates)
-export SSL_EMAIL=your-email@example.com
-./scripts/setup-ssl.sh
-
-# Or for testing (staging certificates)
-export SSL_STAGING=true
-export SSL_EMAIL=your-email@example.com
-./scripts/setup-ssl.sh
-```
-
-**Certificate Auto-Renewal:**
-- Certificates automatically renew every 12 hours via certbot container
-- No manual intervention required
-
-### Step 5: Verify Deployment
-
-```bash
-# Check all services are healthy
-docker-compose -f docker-compose.prod.yml ps
-
-# Test endpoints
-curl https://yourdomain.com/health
-curl https://yourdomain.com/api/auth/login
-
-# View logs
-docker-compose -f docker-compose.prod.yml logs backend
-```
-
-**Access your application:**
-- Frontend: https://yourdomain.com
-- API Documentation: https://yourdomain.com/docs
-- Health Check: https://yourdomain.com/health
-
-**Default Credentials:**
-- Admin: `admin@radiology.com` / `admin123`
-- Doctor: `doctor@hospital.com` / `doctor123`
-
-**⚠️ CRITICAL: Change default passwords immediately!**
-
-## Cloud Platform Guides
-
-### AWS EC2 Deployment
-
-1. **Launch EC2 Instance**
-   - AMI: Ubuntu Server 22.04 LTS
-   - Instance Type: t3.xlarge (4 vCPU, 16 GB RAM)
-   - Storage: 100 GB gp3
-   - Security Group: Allow ports 22, 80, 443
-
-2. **Configure Elastic IP**
-   ```bash
-   # Allocate and associate an Elastic IP
-   # Update DNS A record with Elastic IP
-   ```
-
-3. **Connect and Deploy**
-   ```bash
-   ssh -i your-key.pem ubuntu@your-ec2-ip
-   # Follow "Server Setup" and "Deployment Steps" above
-   ```
-
-### DigitalOcean Droplet
-
-1. **Create Droplet**
-   - Image: Ubuntu 22.04 LTS
-   - Plan: Premium Intel - 8 GB / 4 CPUs
-   - Add Block Storage: 100 GB
-
-2. **Configure Firewall**
-   - Inbound: SSH (22), HTTP (80), HTTPS (443)
-   - Outbound: All
-
-3. **Deploy**
-   ```bash
-   ssh root@your-droplet-ip
-   # Follow deployment steps
-   ```
-
-### Google Cloud Platform (GCP)
-
-1. **Create Compute Engine Instance**
-   ```bash
-   gcloud compute instances create radiology-rag \
-     --machine-type=n1-standard-4 \
-     --image-family=ubuntu-2204-lts \
-     --image-project=ubuntu-os-cloud \
-     --boot-disk-size=100GB \
-     --tags=http-server,https-server
-   ```
-
-2. **Configure Firewall Rules**
-   ```bash
-   gcloud compute firewall-rules create allow-http --allow tcp:80
-   gcloud compute firewall-rules create allow-https --allow tcp:443
-   ```
-
-3. **SSH and Deploy**
-   ```bash
-   gcloud compute ssh radiology-rag
-   # Follow deployment steps
-   ```
-
-### Azure VM
-
-1. **Create Virtual Machine**
-   - Image: Ubuntu Server 22.04 LTS
-   - Size: Standard D4s v3 (4 vCPUs, 16 GB RAM)
-   - Inbound ports: 22, 80, 443
-
-2. **Configure DNS**
-   - Create DNS name label
-   - Update A records
-
-3. **Deploy**
-   ```bash
-   ssh azureuser@your-vm-ip
-   # Follow deployment steps
-   ```
+---
 
 ## SSL/HTTPS Setup
 
-### Manual SSL Setup
-
-If automatic setup fails:
+### Option 1: Certbot (Let's Encrypt) - FREE
 
 ```bash
-# Create directories
-mkdir -p certbot/conf certbot/www
-
-# Stop nginx
-docker-compose -f docker-compose.prod.yml stop nginx
+# Install Certbot
+apt install certbot python3-certbot-nginx -y
 
 # Get certificate
-docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
-  --webroot \
-  --webroot-path=/var/www/certbot \
-  --email your-email@example.com \
-  --agree-tos \
-  --no-eff-email \
-  -d yourdomain.com \
-  -d www.yourdomain.com
+certbot --nginx -d yourdomain.com -d www.yourdomain.com
 
-# Start nginx
-docker-compose -f docker-compose.prod.yml up -d nginx
+# Certbot auto-configures nginx
+# Certificate auto-renews
 ```
 
-### SSL Troubleshooting
+### Option 2: Cloudflare (Easy + Free)
 
-**Certificate not found:**
+1. **Add your domain to Cloudflare**
+2. **Update nameservers** at your registrar
+3. **Enable "Full" SSL** in Cloudflare SSL settings
+4. **Done!** Cloudflare handles SSL
+
+### Option 3: Manual SSL
+
+1. **Get certificates** from your provider
+2. **Copy to server**:
 ```bash
-# Check certificate location
-docker-compose -f docker-compose.prod.yml exec nginx ls -la /etc/letsencrypt/live/yourdomain.com/
-
-# Verify nginx config
-docker-compose -f docker-compose.prod.yml exec nginx nginx -t
+mkdir -p nginx/ssl
+# Upload cert.pem and key.pem
 ```
 
-**DNS issues:**
+3. **Update nginx.conf**:
+Uncomment HTTPS server block in `nginx/nginx.conf`
+
+4. **Restart nginx**:
 ```bash
-# Verify DNS propagation
-dig yourdomain.com +short
-nslookup yourdomain.com
-
-# Wait for DNS to propagate completely
+docker compose -f docker-compose.prod.yml restart nginx
 ```
 
-**Rate limiting:**
-- Let's Encrypt has rate limits (5 certificates per week per domain)
-- Use staging environment for testing: `SSL_STAGING=true`
+---
+
+## Post-Deployment Checklist
+
+- [ ] Update `ALLOWED_ORIGINS` with your domain
+- [ ] Change default admin password (admin@radiology.com / admin123)
+- [ ] Setup SSL/HTTPS
+- [ ] Configure backups
+- [ ] Setup monitoring (optional)
+- [ ] Add custom domain
+- [ ] Test all features
+- [ ] Load template .docx files
+- [ ] Configure SMTP for email notifications
+- [ ] Setup firewall rules
+- [ ] Enable auto-scaling (if needed)
+
+---
 
 ## Monitoring & Maintenance
 
-### Service Management
+### Health Checks
 
 ```bash
-# View all services
-docker-compose -f docker-compose.prod.yml ps
+# Backend health
+curl http://your-domain.com/health
 
-# View logs
-docker-compose -f docker-compose.prod.yml logs -f [service_name]
+# Database
+docker exec radiology-db-prod pg_isready
 
-# Restart a service
-docker-compose -f docker-compose.prod.yml restart [service_name]
-
-# Stop all services
-docker-compose -f docker-compose.prod.yml down
-
-# Start all services
-docker-compose -f docker-compose.prod.yml up -d
+# Logs
+docker compose -f docker-compose.prod.yml logs -f backend
 ```
 
-### Database Backup
+### Backup Database
 
 ```bash
-# Create backup
-docker-compose -f docker-compose.prod.yml exec postgres pg_dump -U radiology_user radiology_templates > backup_$(date +%Y%m%d).sql
+# Manual backup
+docker exec radiology-db-prod pg_dump -U radiology_user radiology_templates > backup_$(date +%Y%m%d).sql
 
-# Restore backup
-cat backup_20240101.sql | docker-compose -f docker-compose.prod.yml exec -T postgres psql -U radiology_user radiology_templates
+# Restore
+cat backup_20250106.sql | docker exec -i radiology-db-prod psql -U radiology_user -d radiology_templates
 ```
 
-### Log Management
-
-```bash
-# View logs
-docker-compose -f docker-compose.prod.yml logs --tail=100 -f
-
-# Clear logs
-docker-compose -f docker-compose.prod.yml down
-docker system prune -a --volumes -f
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Health Monitoring
-
-```bash
-# Check backend health
-curl https://yourdomain.com/health
-
-# Check all services
-docker-compose -f docker-compose.prod.yml ps
-
-# Monitor resource usage
-docker stats
-```
-
-### Automated Backups
-
-Create a cron job for daily backups:
-
-```bash
-# Edit crontab
-crontab -e
-
-# Add daily backup at 2 AM
-0 2 * * * /home/radiology/radiology-rag/scripts/backup.sh
-```
+---
 
 ## Troubleshooting
 
-### Service Won't Start
-
+### Container won't start
 ```bash
-# Check logs
-docker-compose -f docker-compose.prod.yml logs [service_name]
-
-# Check resource usage
-docker stats
-
-# Verify environment variables
-docker-compose -f docker-compose.prod.yml config
+docker compose -f docker-compose.prod.yml logs <service-name>
 ```
 
-### Database Connection Issues
-
+### Database connection issues
 ```bash
-# Check postgres is running
-docker-compose -f docker-compose.prod.yml ps postgres
+# Check if postgres is running
+docker compose -f docker-compose.prod.yml ps postgres
 
-# Test connection
-docker-compose -f docker-compose.prod.yml exec backend python -c "from database import engine; engine.connect()"
-
-# Reset database
-docker-compose -f docker-compose.prod.yml down -v
-docker-compose -f docker-compose.prod.yml up -d
-docker-compose -f docker-compose.prod.yml exec backend python init_db.py
+# Check connection
+docker exec radiology-db-prod psql -U radiology_user -d radiology_templates -c "SELECT 1"
 ```
 
-### Nginx 502 Bad Gateway
-
-```bash
-# Check backend is running
-docker-compose -f docker-compose.prod.yml ps backend
-
-# Check backend logs
-docker-compose -f docker-compose.prod.yml logs backend
-
-# Restart nginx
-docker-compose -f docker-compose.prod.yml restart nginx
-```
-
-### SSL Certificate Issues
-
-```bash
-# Verify certificate files exist
-docker-compose -f docker-compose.prod.yml exec nginx ls -la /etc/letsencrypt/live/yourdomain.com/
-
-# Test nginx configuration
-docker-compose -f docker-compose.prod.yml exec nginx nginx -t
-
-# Renew certificates manually
-docker-compose -f docker-compose.prod.yml run --rm certbot renew
-```
-
-### High Memory Usage
-
+### Out of memory
 ```bash
 # Check memory usage
 docker stats
 
-# Restart services
-docker-compose -f docker-compose.prod.yml restart
-
-# Increase server resources if needed
+# Increase VPS size or add swap:
+fallocate -l 4G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
 ```
 
-## Security Best Practices
+---
 
-### 1. Change Default Credentials
+## Cost Estimates
 
-```bash
-# Login as admin
-# Go to https://yourdomain.com/docs
-# Use /api/auth/change-password endpoint
-```
+### Railway (Recommended for Demo)
+- **Hobby Plan**: $5/month
+- **Includes**: 512MB RAM, Postgres, Redis
+- **Best for**: Demos, MVPs
 
-### 2. Firewall Configuration
+### Render
+- **Starter Plan**: $7/month per service
+- **Total**: ~$21/month (Backend + Frontend + DB)
+- **Best for**: Small production apps
 
-```bash
-# Allow only necessary ports
-sudo ufw allow 22/tcp  # SSH
-sudo ufw allow 80/tcp  # HTTP
-sudo ufw allow 443/tcp # HTTPS
-sudo ufw enable
-```
+### DigitalOcean
+- **Droplet 4GB**: $24/month
+- **Managed Postgres**: $15/month
+- **Total**: ~$39/month
+- **Best for**: Production with control
 
-### 3. Regular Updates
+### AWS
+- **t3.medium**: ~$30/month
+- **RDS t3.micro**: ~$15/month
+- **Total**: ~$45-60/month
+- **Best for**: Enterprise, scaling
 
-```bash
-# Update system packages
-sudo apt update && sudo apt upgrade -y
-
-# Update Docker images
-docker-compose -f docker-compose.prod.yml pull
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-### 4. Secure Environment Variables
-
-```bash
-# Protect .env.production
-chmod 600 .env.production
-
-# Never commit to git
-echo ".env.production" >> .gitignore
-```
-
-### 5. Enable Fail2Ban
-
-```bash
-# Install fail2ban
-sudo apt install fail2ban -y
-
-# Configure for nginx
-sudo nano /etc/fail2ban/jail.local
-```
-
-Add:
-```ini
-[nginx-http-auth]
-enabled = true
-port = http,https
-logpath = /var/log/nginx/error.log
-```
-
-### 6. Database Security
-
-- Use strong passwords
-- Regular backups
-- Restrict network access
-- Enable SSL for database connections
-
-### 7. API Rate Limiting
-
-Consider adding rate limiting to nginx configuration:
-
-```nginx
-limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
-
-location /api {
-    limit_req zone=api burst=20;
-    # ... rest of config
-}
-```
-
-## Performance Optimization
-
-### 1. Enable Caching
-
-Already enabled in production configuration:
-- Redis for application caching
-- Nginx response caching
-- Browser caching via headers
-
-### 2. Database Optimization
-
-```sql
--- Create indexes for common queries
-CREATE INDEX idx_reports_created_at ON reports(created_at);
-CREATE INDEX idx_reports_doctor_name ON reports(doctor_name);
-```
-
-### 3. Resource Limits
-
-Edit `docker-compose.prod.yml` to add resource limits:
-
-```yaml
-services:
-  backend:
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 4G
-```
-
-## Scaling Considerations
-
-### Horizontal Scaling
-
-For high traffic, consider:
-
-1. **Load Balancer** (AWS ELB, Nginx, HAProxy)
-2. **Multiple Backend Instances**
-3. **Separate Database Server**
-4. **Redis Cluster**
-5. **CDN for Frontend** (CloudFlare, CloudFront)
-
-### Vertical Scaling
-
-Increase server resources:
-- More CPU cores
-- More RAM
-- Faster storage (NVMe SSD)
+---
 
 ## Support
 
-For issues or questions:
-1. Check logs: `docker-compose -f docker-compose.prod.yml logs`
-2. Review this documentation
-3. Check GitHub issues
-4. Contact support team
+- **Documentation**: See README.md
+- **Issues**: GitHub Issues
+- **Email**: support@yourdomain.com
 
-## License
+---
 
-[Your License Here]
+**Ready to deploy?** Choose your platform and follow the guide above!

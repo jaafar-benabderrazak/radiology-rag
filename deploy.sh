@@ -1,50 +1,113 @@
 #!/bin/bash
+
+# ==============================================
+# Radiology RAG - Quick Deploy Script
+# ==============================================
+
 set -e
 
-echo "=========================================="
-echo "Radiology RAG System Deployment"
-echo "=========================================="
+echo "🚀 Radiology RAG - Deployment Script"
+echo "===================================="
 
-# Stop existing containers
-echo ""
-echo "1. Stopping existing containers..."
-docker-compose down
+# Check if .env exists
+if [ ! -f .env ]; then
+    echo "❌ Error: .env file not found!"
+    echo "📝 Please create .env file from .env.production template"
+    echo ""
+    echo "Run: cp .env.production .env"
+    echo "Then edit .env with your configuration"
+    exit 1
+fi
 
-# Rebuild images
-echo ""
-echo "2. Building Docker images..."
-docker-compose build --no-cache
+# Check if Docker is installed
+if ! command -v docker &> /dev/null; then
+    echo "❌ Error: Docker is not installed!"
+    echo "📝 Please install Docker first: https://docs.docker.com/get-docker/"
+    exit 1
+fi
 
-# Start all services
-echo ""
-echo "3. Starting all services..."
-docker-compose up -d
+# Check if Docker Compose is available
+if ! docker compose version &> /dev/null; then
+    echo "❌ Error: Docker Compose is not available!"
+    echo "📝 Please install Docker Compose plugin"
+    exit 1
+fi
 
-# Wait for services to be ready
 echo ""
-echo "4. Waiting for services to be ready..."
+echo "✅ Prerequisites checked"
+echo ""
+
+# Ask for deployment type
+echo "Select deployment type:"
+echo "1) Development (docker-compose.yml)"
+echo "2) Production (docker-compose.prod.yml)"
+read -p "Enter choice [1-2]: " choice
+
+case $choice in
+    1)
+        COMPOSE_FILE="docker-compose.yml"
+        echo "📦 Deploying in DEVELOPMENT mode..."
+        ;;
+    2)
+        COMPOSE_FILE="docker-compose.prod.yml"
+        echo "🏭 Deploying in PRODUCTION mode..."
+        ;;
+    *)
+        echo "❌ Invalid choice. Exiting."
+        exit 1
+        ;;
+esac
+
+echo ""
+echo "🛑 Stopping existing containers..."
+docker compose -f $COMPOSE_FILE down
+
+echo ""
+echo "🗑️  Cleaning up old images..."
+docker compose -f $COMPOSE_FILE down --rmi local || true
+
+echo ""
+echo "🏗️  Building containers..."
+docker compose -f $COMPOSE_FILE build --no-cache
+
+echo ""
+echo "🚀 Starting containers..."
+docker compose -f $COMPOSE_FILE up -d
+
+echo ""
+echo "⏳ Waiting for services to be healthy..."
 sleep 10
 
-# Show logs
 echo ""
-echo "5. Checking service status..."
-echo ""
-docker-compose ps
+echo "📊 Service Status:"
+docker compose -f $COMPOSE_FILE ps
 
 echo ""
-echo "=========================================="
-echo "Deployment Complete!"
-echo "=========================================="
+echo "🔍 Checking health..."
+sleep 5
+
+# Check backend health
+if curl -f http://localhost:8000/health &> /dev/null; then
+    echo "✅ Backend is healthy"
+else
+    echo "⚠️  Backend health check failed. Checking logs..."
+    docker compose -f $COMPOSE_FILE logs backend | tail -20
+fi
+
 echo ""
-echo "Services:"
-echo "  - Frontend:  http://localhost:3000"
-echo "  - Backend:   http://localhost:8000"
-echo "  - API Docs:  http://localhost:8000/docs"
-echo "  - Qdrant UI: http://localhost:6333/dashboard"
+echo "✅ Deployment complete!"
 echo ""
-echo "To view logs:"
-echo "  docker-compose logs -f"
+echo "📍 Access your application:"
+echo "   Frontend: http://localhost:3000"
+echo "   Backend:  http://localhost:8000"
+echo "   API Docs: http://localhost:8000/docs"
 echo ""
-echo "To stop all services:"
-echo "  docker-compose down"
+echo "👤 Default credentials:"
+echo "   Admin:  admin@radiology.com / admin123"
+echo "   Doctor: doctor@hospital.com / doctor123"
+echo ""
+echo "⚠️  IMPORTANT: Change default passwords immediately!"
+echo ""
+echo "📝 View logs: docker compose -f $COMPOSE_FILE logs -f"
+echo "🛑 Stop:      docker compose -f $COMPOSE_FILE down"
 echo ""
