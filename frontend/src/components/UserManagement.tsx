@@ -30,7 +30,7 @@ export function UserManagement() {
   const loadUsers = async () => {
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:8000/api/users/', {
+      const response = await fetch(`${api.API_BASE}/api/users/`, {
         headers: {
           'Authorization': `Bearer ${api.getToken()}`
         }
@@ -71,7 +71,7 @@ export function UserManagement() {
     if (!confirm('Are you sure you want to deactivate this user?')) return
 
     try {
-      const response = await fetch(`http://localhost:8000/api/users/${userId}/deactivate`, {
+      const response = await fetch(`${api.API_BASE}/api/users/${userId}/deactivate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${api.getToken()}`
@@ -87,7 +87,7 @@ export function UserManagement() {
 
   const handleActivate = async (userId: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/users/${userId}/activate`, {
+      const response = await fetch(`${api.API_BASE}/api/users/${userId}/activate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${api.getToken()}`
@@ -105,7 +105,7 @@ export function UserManagement() {
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return
 
     try {
-      const response = await fetch(`http://localhost:8000/api/users/${userId}`, {
+      const response = await fetch(`${api.API_BASE}/api/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${api.getToken()}`

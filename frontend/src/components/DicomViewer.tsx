@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API_BASE } from '../lib/api'
 
 interface DicomFile {
   file_path: string
@@ -53,7 +54,7 @@ export default function DicomViewer({ filePath, autoLoad = false }: DicomViewerP
       params.append('limit', '50')
 
       const response = await fetch(
-        `http://localhost:8000/api/dicom/list?${params}`,
+        `${API_BASE}/api/dicom/list?${params}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -84,7 +85,7 @@ export default function DicomViewer({ filePath, autoLoad = false }: DicomViewerP
       }
 
       const response = await fetch(
-        `http://localhost:8000/api/dicom/image/${path}`,
+        `${API_BASE}/api/dicom/image/${path}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`

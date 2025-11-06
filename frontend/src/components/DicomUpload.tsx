@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { API_BASE } from '../lib/api'
 
 interface DicomMetadata {
   patient: {
@@ -126,7 +127,7 @@ export default function DicomUpload({ onUploadComplete, onError }: DicomUploadPr
           reject(new Error('Network error during upload'))
         })
 
-        xhr.open('POST', 'http://localhost:8000/api/dicom/upload')
+        xhr.open('POST', `${API_BASE}/api/dicom/upload`)
         xhr.setRequestHeader('Authorization', `Bearer ${token}`)
         xhr.send(formData)
       })

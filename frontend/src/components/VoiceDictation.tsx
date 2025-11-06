@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { API_BASE } from '../lib/api'
 
 interface VoiceDictationProps {
   onTranscription: (text: string) => void
@@ -151,7 +152,7 @@ export default function VoiceDictation({
       formData.append('specialty', specialty)
 
       // Send to backend
-      const response = await fetch('http://localhost:8000/api/voice/transcribe', {
+      const response = await fetch(`${API_BASE}/api/voice/transcribe`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

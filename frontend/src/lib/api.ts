@@ -16,6 +16,9 @@ const getApiBase = () => {
 
 const base = getApiBase()
 
+// Export base URL for components that need direct fetch calls
+export const API_BASE = base
+
 // Token management
 const TOKEN_KEY = 'auth_token'
 
