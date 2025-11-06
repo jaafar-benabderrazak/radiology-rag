@@ -120,3 +120,6 @@ async def get_current_user_optional(
 
     user = db.query(User).filter(User.email == token_data.email).first()
     return user
+
+# Alias for backward compatibility
+require_admin = get_current_admin_user
