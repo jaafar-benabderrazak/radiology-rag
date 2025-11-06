@@ -1,6 +1,19 @@
-const base = import.meta.env.VITE_API_BASE || (typeof window !== 'undefined'
-  ? (window as any).__API_BASE__ || 'http://localhost:8000'
-  : 'http://localhost:8000')
+const getApiBase = () => {
+  if (import.meta.env.VITE_API_BASE) {
+    return import.meta.env.VITE_API_BASE
+  }
+  if (typeof window !== 'undefined' && (window as any).__API_BASE__) {
+    return (window as any).__API_BASE__
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    const protocol = window.location.protocol
+    const hostname = window.location.hostname
+    return `${protocol}//${hostname}:8000`
+  }
+  return 'http://localhost:8000'
+}
+
+const base = getApiBase()
 
 // Token management
 const TOKEN_KEY = 'auth_token'
