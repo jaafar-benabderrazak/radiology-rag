@@ -66,7 +66,7 @@ When running, visit: `https://[your-repl-url]:8000/docs`
 4. ✅ Set up frontend to dynamically connect to backend API
 5. ✅ Configured workflows for both backend (port 8000) and frontend (port 5000)
 6. ✅ Set up deployment configuration for Replit Autoscale (frontend only)
-7. ✅ Fixed bcrypt compatibility issue (downgraded to 4.x for passlib)
+7. ✅ Fixed bcrypt compatibility issue (using bcrypt 4.0.1 for passlib compatibility)
 8. ✅ Created default users (admin and doctor accounts)
 
 ## Default User Accounts
