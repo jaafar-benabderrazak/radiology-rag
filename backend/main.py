@@ -158,17 +158,8 @@ def format_skeleton(skeleton: str, meta: Meta, indication: str) -> str:
     )
 
 # ---------- API Endpoints ----------
-
-@app.get("/")
-async def root():
-    """Health check endpoint"""
-    return {
-        "status": "online",
-        "service": "Radiology RAG API",
-        "version": "1.0.0",
-        "cache_enabled": cache.enabled,
-        "vector_db_enabled": vector_service.client is not None
-    }
+# Note: Root endpoint "/" is defined at the bottom of this file
+# to serve the frontend after static files are mounted
 
 @app.get("/templates", response_model=List[TemplateResponse])
 async def list_templates(db: Session = Depends(get_db)):
