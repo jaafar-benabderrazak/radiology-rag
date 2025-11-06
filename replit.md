@@ -27,11 +27,13 @@ AI-powered radiology report generation system with Google Gemini integration, bu
 - `GEMINI_API_KEY` - Google Gemini API key for AI features ✅ Configured
 
 ### Optional Features (Currently Disabled)
-- **Redis Caching** - Would improve performance
-- **Qdrant Vector DB** - For RAG (Retrieval-Augmented Generation) features
-- **DICOM Integration** - Medical image handling
+- **Redis Caching** - Would improve performance (package installed but optional)
+- **Qdrant Vector DB** - For RAG features (package installed but optional)
+- **Vector Embeddings** - Removed sentence-transformers/PyTorch to reduce deployment size
+- **DICOM Integration** - Requires pydicom library
 - **Backup Service** - Database backups
 - **Voice Dictation** - Requires Whisper library
+- **Advanced NLP** - Removed spacy and scikit-learn to reduce deployment size
 
 ## Workflows
 
@@ -84,10 +86,19 @@ When running, visit: `https://[your-repl-url]:8000/docs`
 
 ## Known Limitations
 - No PostgreSQL (using SQLite instead - works fine for single-user/small teams)
-- No Redis caching (would improve performance with high traffic)
-- No vector search/RAG features (requires sentence-transformers library)
+- No Redis caching in dev (installed but optional, would improve performance)
+- No vector embeddings/RAG (removed sentence-transformers/PyTorch to reduce deployment size)
+- No advanced NLP features (removed spacy/scikit-learn to reduce deployment size)
 - No DICOM support (requires pydicom library)
 - Templates directory needs manual setup (copy .docx files to `backend/templates/`)
+
+## Deployment Optimizations (November 6, 2025)
+- ✅ Removed PyTorch, TorchVision, CUDA libraries (~4 GiB saved)
+- ✅ Removed sentence-transformers, transformers (~1 GiB saved)
+- ✅ Removed spacy, scikit-learn, google-cloud-aiplatform (~500 MB saved)
+- ✅ Using google-generativeai (lightweight) for all AI features
+- ✅ Switched from Autoscale to Reserved VM for multi-service deployment
+- ✅ Total deployment image now well under 8 GiB limit
 
 ## Development Commands
 
@@ -107,10 +118,11 @@ npm run build    # Production build
 ```
 
 ## Deployment
-The project is configured for Replit Autoscale deployment:
+The project is configured for Replit Reserved VM deployment:
+- Backend API runs on port 8000 (FastAPI/Uvicorn)
 - Frontend builds to static files and serves on port 5000
-- Backend runs separately (not included in autoscale deployment)
-- For production, consider using VM deployment to run both services
+- Both services run simultaneously in production
+- Optimized dependencies (removed heavy ML libraries) to stay under 8 GiB limit
 
 ## Next Steps
 1. ✅ Database initialized with default users
