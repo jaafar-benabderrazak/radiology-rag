@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from config import settings
 from database import Base
 from models import Template, User, UserRole
-from template_loader import load_templates_from_files, DEFAULT_TEMPLATES
+from template_loader import load_templates_from_files
 from auth import get_password_hash
 import json
 
@@ -31,30 +31,29 @@ def init_database():
         if existing > 0:
             print(f"✓ Database already has {existing} templates")
         else:
-            # Try to load templates from .docx files
-            print("Loading templates from files...")
+            # Load templates from .docx files ONLY
+            print("Loading templates from .docx files in /app/templates/...")
             templates_data = load_templates_from_files()
 
-            # If no templates found in files, use defaults
-            if not templates_data:
-                print("⚠ No template files found, using default templates")
-                templates_data = DEFAULT_TEMPLATES
+            if templates_data:
+                print(f"Seeding {len(templates_data)} templates from files...")
 
-            print(f"Seeding {len(templates_data)} templates...")
+                for tpl_data in templates_data:
+                    template = Template(**tpl_data)
+                    db.add(template)
 
-            for tpl_data in templates_data:
-                template = Template(**tpl_data)
-                db.add(template)
+                db.commit()
+                print(f"✓ Seeded {len(templates_data)} templates successfully")
 
-            db.commit()
-            print(f"✓ Seeded {len(templates_data)} templates successfully")
-
-            # Print loaded templates
-            print("\nLoaded templates:")
-            for tpl in templates_data:
-                print(f"  - {tpl['template_id']}: {tpl['title']}")
-                print(f"    Keywords: {', '.join(tpl['keywords'][:5])}")
-                print(f"    Category: {tpl.get('category', 'General')}")
+                # Print loaded templates
+                print("\nLoaded templates:")
+                for tpl in templates_data:
+                    print(f"  - {tpl['template_id']}: {tpl['title']}")
+                    print(f"    Keywords: {', '.join(tpl['keywords'][:5])}")
+                    print(f"    Category: {tpl.get('category', 'General')}")
+            else:
+                print("⚠ No .docx template files found in /app/templates/")
+                print("ℹ️  You can add templates later via the application UI")
 
         # Create default users if they don't exist
         print("\nChecking for default users...")
