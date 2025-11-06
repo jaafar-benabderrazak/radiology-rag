@@ -71,7 +71,8 @@ When running, visit: `https://[your-repl-url]:8000/docs`
 7. ✅ Fixed bcrypt compatibility issue (using bcrypt 4.0.1 for passlib compatibility)
 8. ✅ Created default users (admin and doctor accounts)
 9. ✅ **CRITICAL FIX**: Removed conflicting root endpoint to enable frontend serving
-10. ✅ **CRITICAL FIX**: Fixed production API URL (removed port 8000) for same-origin deployment
+10. ✅ **CRITICAL FIX**: Fixed all hardcoded localhost:8000 URLs in 5 frontend files (api.ts, UserManagement, VoiceDictation, DicomViewer, DicomUpload)
+11. ✅ **CRITICAL FIX**: Production API now uses same-origin requests (no port number) for cross-device compatibility
 
 ## Default User Accounts
 **Admin User:**
