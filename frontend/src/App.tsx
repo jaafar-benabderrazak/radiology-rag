@@ -12,6 +12,8 @@ import {
   type ValidationResult
 } from "./lib/api"
 import VoiceDictation from "./components/VoiceDictation"
+import DicomUpload from "./components/DicomUpload"
+import DicomViewer from "./components/DicomViewer"
 
 // Language interface
 type Language = 'en' | 'fr'
@@ -533,6 +535,25 @@ export default function App() {
               language={language === 'fr' ? 'fr' : 'en'}
               specialty="radiology"
             />
+
+            {/* DICOM Upload */}
+            <DicomUpload
+              onUploadComplete={(result) => {
+                // Auto-populate clinical indication with DICOM metadata
+                const summary = `Patient: ${result.metadata.patient.patient_name}\n` +
+                  `Study: ${result.metadata.study.study_description}\n` +
+                  `Modality: ${result.metadata.series.modality}\n` +
+                  `Accession: ${result.metadata.study.accession_number}\n\n` +
+                  `Clinical Indication: `
+                setInputText((prev) => prev ? prev + '\n\n' + summary : summary)
+              }}
+              onError={(error) => {
+                console.error('DICOM upload error:', error)
+              }}
+            />
+
+            {/* DICOM Viewer */}
+            <DicomViewer />
 
             {/* Metadata Section */}
             <details className="metadata-section">
