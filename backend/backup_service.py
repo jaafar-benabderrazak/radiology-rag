@@ -19,13 +19,13 @@ class BackupService:
 
     def __init__(self):
         # Backup configuration from environment
-        self.backup_enabled = os.getenv("BACKUP_ENABLED", "true").lower() == "true"
-        self.backup_dir = Path(os.getenv("BACKUP_DIR", "/app/backups"))
+        self.backup_enabled = os.getenv("BACKUP_ENABLED", "false").lower() == "true"
+        self.backup_dir = Path(os.getenv("BACKUP_DIR", "./backups"))
         self.retention_days = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
         self.max_backups = int(os.getenv("MAX_BACKUPS", "50"))
 
         # Database configuration
-        self.db_host = os.getenv("DB_HOST", "postgres")
+        self.db_host = os.getenv("DB_HOST", "localhost")
         self.db_port = os.getenv("DB_PORT", "5432")
         self.db_name = os.getenv("DB_NAME", "radiology_db")
         self.db_user = os.getenv("DB_USER", "postgres")
@@ -35,8 +35,9 @@ class BackupService:
         self.remote_backup_enabled = os.getenv("REMOTE_BACKUP_ENABLED", "false").lower() == "true"
         self.remote_backup_path = os.getenv("REMOTE_BACKUP_PATH", "")
 
-        # Ensure backup directory exists
-        self.backup_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure backup directory exists (only if backups are enabled)
+        if self.backup_enabled:
+            self.backup_dir.mkdir(parents=True, exist_ok=True)
 
         # Backup metadata file
         self.metadata_file = self.backup_dir / "backup_metadata.json"

@@ -17,12 +17,13 @@ class DICOMService:
 
     def __init__(self):
         # Configuration
-        self.enabled = os.getenv("DICOM_ENABLED", "true").lower() == "true"
-        self.upload_dir = Path(os.getenv("DICOM_UPLOAD_DIR", "/app/dicom_storage"))
+        self.enabled = os.getenv("DICOM_ENABLED", "false").lower() == "true"
+        self.upload_dir = Path(os.getenv("DICOM_UPLOAD_DIR", "./dicom_storage"))
         self.max_file_size = int(os.getenv("DICOM_MAX_FILE_SIZE", "104857600"))  # 100MB default
 
-        # Create storage directory
-        self.upload_dir.mkdir(parents=True, exist_ok=True)
+        # Create storage directory (only if DICOM is enabled)
+        if self.enabled:
+            self.upload_dir.mkdir(parents=True, exist_ok=True)
 
         # Check for pydicom
         self.pydicom_available = False

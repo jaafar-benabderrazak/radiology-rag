@@ -6,20 +6,24 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = os.getenv("POSTGRES_USER", "radiology_user")
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "secure_password")
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "radiology_templates")
-    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "postgres")
+    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "localhost")
     POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
+    
+    USE_SQLITE: bool = os.getenv("USE_SQLITE", "true").lower() == "true"
 
     @property
     def DATABASE_URL(self) -> str:
+        if self.USE_SQLITE:
+            return "sqlite:///./radiology_db.sqlite"
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     # Redis
-    REDIS_HOST: str = os.getenv("REDIS_HOST", "redis")
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
 
     # Qdrant
-    QDRANT_HOST: str = os.getenv("QDRANT_HOST", "qdrant")
+    QDRANT_HOST: str = os.getenv("QDRANT_HOST", "localhost")
     QDRANT_PORT: int = int(os.getenv("QDRANT_PORT", "6333"))
     QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "radiology_reports")
 
@@ -28,7 +32,7 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
 
     # Cache settings
-    CACHE_ENABLED: bool = os.getenv("CACHE_ENABLED", "true").lower() == "true"
+    CACHE_ENABLED: bool = os.getenv("CACHE_ENABLED", "false").lower() == "true"
     CACHE_TTL: int = int(os.getenv("CACHE_TTL", "3600"))  # 1 hour
 
     # Authentication settings

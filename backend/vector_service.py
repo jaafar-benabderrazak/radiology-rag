@@ -1,16 +1,35 @@
 """Qdrant vector database service for semantic search"""
 from typing import List, Optional, Dict, Any
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
-from sentence_transformers import SentenceTransformer
 from config import settings
 import uuid
+
+# Try to import optional dependencies
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+    QDRANT_AVAILABLE = True
+except ImportError:
+    QDRANT_AVAILABLE = False
+    print("⚠ Qdrant client not available")
+
+try:
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+    print("⚠ sentence-transformers not available")
 
 class VectorService:
     def __init__(self):
         self.collection_name = settings.QDRANT_COLLECTION
         self.embedding_model_name = "all-MiniLM-L6-v2"  # 384 dimensions
         self.embedding_dim = 384
+        self.client = None
+        self.embedding_model = None
+
+        if not QDRANT_AVAILABLE or not SENTENCE_TRANSFORMERS_AVAILABLE:
+            print(f"⚠ Vector service disabled: Qdrant={QDRANT_AVAILABLE}, SentenceTransformers={SENTENCE_TRANSFORMERS_AVAILABLE}")
+            return
 
         try:
             # Initialize Qdrant client
