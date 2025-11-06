@@ -51,12 +51,11 @@ echo "🔧 Enabling required APIs..."
 gcloud services enable \
   run.googleapis.com \
   cloudbuild.googleapis.com \
-  sqladmin.googleapis.com \
-  aiplatform.googleapis.com \
   secretmanager.googleapis.com \
   --quiet
 
 echo "✅ APIs enabled"
+echo "ℹ️  Note: Not enabling Vertex AI - using free Gemini API instead"
 echo ""
 
 # Get API keys
@@ -111,9 +110,12 @@ gcloud run deploy radiology-backend \
   --max-instances=10 \
   --min-instances=0 \
   --timeout=300 \
-  --set-env-vars="ENVIRONMENT=production,USE_VERTEX_AI=true,GCP_PROJECT_ID=$PROJECT_ID,GCP_REGION=$REGION" \
+  --set-env-vars="ENVIRONMENT=production" \
   --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,SECRET_KEY=app-secret-key:latest" \
   --quiet
+
+echo "ℹ️  Using Gemini API (free tier, 15 req/min)"
+echo "   To upgrade to Vertex AI later (60 req/min), see DEPLOY_FREE.md"
 
 BACKEND_URL=$(gcloud run services describe radiology-backend --region=$REGION --format='value(status.url)')
 echo "✅ Backend deployed: $BACKEND_URL"

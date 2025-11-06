@@ -4,15 +4,17 @@ Deploy your demo completely FREE using Google Cloud, Render, or other free-tier 
 
 ---
 
-## 🏆 Best Option: Google Cloud Run + Vertex AI
+## 🏆 Best Option: Google Cloud Run (with Gemini API)
 
 **Why this is the BEST free option:**
 - ✅ **$300 FREE credit** for 90 days (no credit card required initially)
-- ✅ **Vertex AI** included (better than free Gemini API)
+- ✅ **Uses your current Gemini API** (no changes needed!)
+- ✅ **Optional Vertex AI upgrade** for production (better rate limits)
 - ✅ **2 million requests/month** free forever
 - ✅ Professional infrastructure
 - ✅ Auto-scaling
-- ✅ You're already using Google AI!
+
+**Note**: Your app already uses Gemini API and works great! Vertex AI is just an optional upgrade for production deployments when you need higher rate limits (60 req/min vs 15 req/min).
 
 ### Step-by-Step Deployment
 
@@ -54,19 +56,16 @@ gcloud projects create radiology-rag-demo --name="Radiology RAG Demo"
 # Set as default project
 gcloud config set project radiology-rag-demo
 
-# Enable required APIs
+# Enable required APIs (aiplatform is optional, only for Vertex AI)
 gcloud services enable \
   run.googleapis.com \
   cloudbuild.googleapis.com \
-  sqladmin.googleapis.com \
-  aiplatform.googleapis.com \
   secretmanager.googleapis.com
 ```
 
-#### 4. Setup Vertex AI
+#### 4. Setup Project
 
 ```bash
-# Vertex AI is automatically available!
 # Get your PROJECT_ID
 export PROJECT_ID=$(gcloud config get-value project)
 echo "Your Project ID: $PROJECT_ID"
@@ -75,6 +74,8 @@ echo "Your Project ID: $PROJECT_ID"
 export REGION=us-central1
 gcloud config set run/region $REGION
 ```
+
+**Note**: We're NOT enabling Vertex AI here. Your app will use the regular Gemini API (free tier) which is perfect for demos!
 
 #### 5. Create Databases
 
@@ -118,7 +119,7 @@ gcloud secrets add-iam-policy-binding gemini-api-key \
 ```bash
 cd backend
 
-# Deploy to Cloud Run
+# Deploy to Cloud Run (using Gemini API)
 gcloud run deploy radiology-backend \
   --source . \
   --region=$REGION \
@@ -126,7 +127,7 @@ gcloud run deploy radiology-backend \
   --memory=2Gi \
   --cpu=2 \
   --max-instances=10 \
-  --set-env-vars="ENVIRONMENT=production,USE_VERTEX_AI=true,GCP_PROJECT_ID=$PROJECT_ID" \
+  --set-env-vars="ENVIRONMENT=production" \
   --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,SECRET_KEY=app-secret-key:latest"
 
 # Get backend URL
@@ -188,16 +189,18 @@ echo "   Doctor: doctor@hospital.com / doctor123"
 | Cloud Run (Backend) | ~$15 | 2M requests free |
 | Cloud Run (Frontend) | ~$8 | 2M requests free |
 | Cloud SQL (db-f1-micro) | ~$10 | $300 credit |
-| Vertex AI (Gemini) | ~$5 | $300 credit |
-| **Total** | **~$38/mo** | **FREE for 90 days!** |
+| Gemini API | **FREE** | 15 req/min free tier |
+| **Total** | **~$33/mo** | **FREE for 90 days!** |
 
 ### After Credits (Forever Free Tier)
 
 - **Cloud Run**: 2 million requests/month FREE
-- **Vertex AI**: Pay per use (very cheap for demo)
+- **Gemini API**: FREE (15 requests/min, 1500 requests/day)
 - **Cloud SQL**: ~$10/month (smallest instance)
 
 **Estimated cost after credits**: $10-15/month for light usage
+
+**Optional Upgrade**: Switch to Vertex AI later if you need higher limits (60 req/min vs 15 req/min)
 
 ---
 
@@ -304,22 +307,33 @@ flyctl deploy
 
 ---
 
-## 🔧 Vertex AI vs Gemini API
+## 🔧 Gemini API vs Vertex AI (Optional)
 
-### Current Setup (Gemini API - FREE)
+### Default: Gemini API (FREE - Recommended for Demos)
 
+**What you have now:**
 ```python
 import google.generativeai as genai
 genai.configure(api_key="YOUR_API_KEY")
 model = genai.GenerativeModel('gemini-pro')
 ```
 
-**Free tier limits:**
-- 15 requests/minute
-- 1,500 requests/day
-- 32K token context
+**Free tier limits (perfect for demos!):**
+- ✅ 15 requests/minute
+- ✅ 1,500 requests/day
+- ✅ 32K token context
+- ✅ **Completely FREE forever**
+- ✅ No GCP project needed
+- ✅ Works everywhere (local + deployed)
 
-### With Vertex AI (BETTER)
+**This is what your app uses by default!**
+
+### Optional: Vertex AI (for Heavy Production Use)
+
+**Only switch if you need:**
+- Higher quotas (60 requests/minute vs 15)
+- Enterprise SLA
+- Advanced monitoring
 
 ```python
 from google.cloud import aiplatform
@@ -329,12 +343,12 @@ aiplatform.init(project="your-project-id", location="us-central1")
 model = GenerativeModel("gemini-pro")
 ```
 
-**Benefits:**
-- ✅ Better quotas (60 requests/minute)
-- ✅ Enterprise SLA
-- ✅ Better reliability
-- ✅ Integrated monitoring
-- ✅ Same pricing (uses $300 credit)
+**When to use:**
+- 🚀 Production with >1,500 reports/day
+- 🏢 Enterprise requirements
+- 📊 Need advanced monitoring
+
+**For most demos and light production: Stick with Gemini API (free tier)!**
 
 ---
 
