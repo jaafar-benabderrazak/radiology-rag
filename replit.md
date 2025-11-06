@@ -118,11 +118,28 @@ npm run build    # Production build
 ```
 
 ## Deployment
-The project is configured for Replit Reserved VM deployment:
-- Backend API runs on port 8000 (FastAPI/Uvicorn)
-- Frontend builds to static files and serves on port 5000
-- Both services run simultaneously in production
-- Optimized dependencies (removed heavy ML libraries) to stay under 8 GiB limit
+The project is configured for Replit Autoscale deployment:
+- **Single Service Architecture**: Backend FastAPI serves both API and frontend
+- **Port 5000**: All traffic (API + frontend) on single port for Autoscale compatibility
+- **Static Files**: Frontend builds to dist/ and is served by FastAPI
+- **Build Process**: Frontend builds first, then backend starts serving everything
+- **Image Size**: Optimized dependencies keep deployment under 8 GiB limit
+
+### Deployment Configuration
+```bash
+# Build: Install all dependencies
+pip install -r backend/requirements.txt && cd frontend && npm install
+
+# Run: Build frontend, then start backend on port 5000
+cd frontend && npm run build && cd ../backend && uvicorn main:app --host 0.0.0.0 --port 5000
+```
+
+### How It Works
+1. Frontend builds to static files (`frontend/dist/`)
+2. Backend FastAPI serves:
+   - API routes at `/api/*`, `/health`, etc.
+   - Static frontend files at `/` and all other routes
+3. Single port (5000) handles all traffic (required for Autoscale)
 
 ## Next Steps
 1. ✅ Database initialized with default users

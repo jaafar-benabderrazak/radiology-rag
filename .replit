@@ -54,7 +54,11 @@ externalPort = 80
 localPort = 8000
 externalPort = 8000
 
+[[ports]]
+localPort = 43589
+externalPort = 3000
+
 [deployment]
-deploymentTarget = "vm"
-run = ["sh", "-c", "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && npm run build && npx serve -s dist -l 5000"]
+deploymentTarget = "autoscale"
+run = ["sh", "-c", "cd frontend && npm run build && cd ../backend && python -m uvicorn main:app --host 0.0.0.0 --port 5000"]
 build = ["sh", "-c", "pip install -r backend/requirements.txt && cd frontend && npm install"]

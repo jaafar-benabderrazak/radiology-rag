@@ -1,9 +1,11 @@
 # main.py
 import os
+from pathlib import Path
 from typing import List, Optional, Literal
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -748,3 +750,61 @@ async def health_check():
         "vector_db": "connected" if vector_service.client else "disconnected",
         "gemini_model": settings.GEMINI_MODEL
     }
+
+# Serve static frontend files (for production deployment)
+# Get the project root directory (parent of backend directory)
+backend_dir = Path(__file__).resolve().parent
+project_root = backend_dir.parent
+frontend_dist = project_root / "frontend" / "dist"
+
+if frontend_dist.exists() and (frontend_dist / "index.html").exists():
+    print(f"✓ Serving frontend from: {frontend_dist}")
+    
+    # Mount static assets (js, css, images, etc.) if they exist
+    assets_dir = frontend_dist / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+    
+    # Root endpoint serves frontend
+    @app.get("/")
+    async def root_frontend():
+        """Serve frontend for root path"""
+        return FileResponse(frontend_dist / "index.html")
+    
+    # Catch-all route for SPA (Single Page Application) routing
+    # This handles client-side routes like /dashboard, /reports, etc.
+    # Note: API routes (/api/*) are already registered above and take precedence
+    @app.get("/{full_path:path}")
+    async def catch_all_frontend(full_path: str):
+        """Serve frontend index.html for all non-API, non-static routes"""
+        # Skip API routes - they're handled by specific endpoints above
+        if full_path.startswith("api/") or full_path.startswith("health") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+            # Let the actual API route handler process this
+            # This shouldn't normally be reached since specific routes take precedence
+            raise HTTPException(status_code=404, detail="Not Found")
+        
+        # Check if it's a file request (has extension)
+        if "." in full_path.split("/")[-1]:
+            # Try to serve the actual file
+            file_path = frontend_dist / full_path
+            if file_path.exists() and file_path.is_file():
+                return FileResponse(file_path)
+        
+        # For all other routes, serve index.html (SPA routing)
+        return FileResponse(frontend_dist / "index.html")
+else:
+    print("⚠ Frontend not built. Serving API only.")
+    print(f"  Expected location: {frontend_dist}")
+    print("  Run: cd frontend && npm run build")
+    
+    @app.get("/")
+    async def root():
+        """Root endpoint when frontend is not built"""
+        return {
+            "message": "Radiology RAG API",
+            "status": "running",
+            "version": "1.0.0",
+            "docs": "/docs",
+            "health": "/health",
+            "note": "Frontend not built. Deploy will build it automatically."
+        }
