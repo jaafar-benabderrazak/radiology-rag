@@ -70,6 +70,8 @@ When running, visit: `https://[your-repl-url]:8000/docs`
 6. ✅ Set up deployment configuration for Replit Autoscale (frontend only)
 7. ✅ Fixed bcrypt compatibility issue (using bcrypt 4.0.1 for passlib compatibility)
 8. ✅ Created default users (admin and doctor accounts)
+9. ✅ **CRITICAL FIX**: Removed conflicting root endpoint to enable frontend serving
+10. ✅ **CRITICAL FIX**: Fixed production API URL (removed port 8000) for same-origin deployment
 
 ## Default User Accounts
 **Admin User:**
@@ -97,8 +99,9 @@ When running, visit: `https://[your-repl-url]:8000/docs`
 - ✅ Removed sentence-transformers, transformers (~1 GiB saved)
 - ✅ Removed spacy, scikit-learn, google-cloud-aiplatform (~500 MB saved)
 - ✅ Using google-generativeai (lightweight) for all AI features
-- ✅ Switched from Autoscale to Reserved VM for multi-service deployment
+- ✅ Configured single-service Autoscale deployment (frontend + backend on same port)
 - ✅ Total deployment image now well under 8 GiB limit
+- ✅ Fixed frontend API configuration for production (same-origin requests)
 
 ## Development Commands
 

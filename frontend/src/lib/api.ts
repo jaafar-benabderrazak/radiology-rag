@@ -6,9 +6,10 @@ const getApiBase = () => {
     return (window as any).__API_BASE__
   }
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    // In production (Autoscale), frontend and backend are on the same origin
     const protocol = window.location.protocol
     const hostname = window.location.hostname
-    return `${protocol}//${hostname}:8000`
+    return `${protocol}//${hostname}`
   }
   return 'http://localhost:8000'
 }
