@@ -1,0 +1,19 @@
+# Replit configuration for Radiology RAG
+run = "bash start-replit.sh"
+entrypoint = "backend/main.py"
+language = "python3"
+
+[nix]
+channel = "stable-23_11"
+
+[deployment]
+run = ["bash", "start-replit.sh"]
+deploymentTarget = "cloudrun"
+
+[env]
+PYTHONUNBUFFERED = "1"
+ENVIRONMENT = "replit"
+
+[[ports]]
+localPort = 8000
+externalPort = 80
