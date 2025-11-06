@@ -1,8 +1,8 @@
 FROM python:3.11-slim
 
-# System deps (curl for healthcheck, and some build tools for wheels)
+# System deps (curl for healthcheck, build tools, and LibreOffice for PDF conversion)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl build-essential git && \
+    curl build-essential git libreoffice-writer libreoffice-core && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -19,5 +19,5 @@ COPY . /app
 
 EXPOSE 8000
 
-# Default command (uvicorn); compose will mount code for live reload if you want that locally
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Direct command to avoid Windows line ending issues with startup.sh
+CMD ["sh", "-c", "sleep 10 && python init_db.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]

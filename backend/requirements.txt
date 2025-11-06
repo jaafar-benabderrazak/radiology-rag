@@ -9,6 +9,8 @@ fastapi-cors==0.0.6
 # Data models and validation
 pydantic==2.5.0
 pydantic-settings==2.1.0
+python-dotenv==1.0.0
+email-validator==2.1.0
 
 # Embeddings and ML
 sentence-transformers==2.2.2
@@ -22,10 +24,21 @@ python-docx==1.1.0
 pypdf2==3.0.1
 mammoth==1.6.0
 
-# Vector database (optional - for production)
-# pinecone-client==2.2.4
-# weaviate-client==3.25.0
-# qdrant-client==1.6.4
+# Database support
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1
+
+# Authentication and Security
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
+python-jose[cryptography]==3.3.0
+
+# Vector database
+qdrant-client==1.7.0
+
+# Caching
+redis==5.0.1
 
 # Async support
 aiofiles==23.2.1
@@ -49,4 +62,5 @@ pytest-asyncio==0.21.1
 httpx==0.25.1
 
 google-generativeai==0.8.3
+google-cloud-aiplatform==1.38.0
 protobuf<5
