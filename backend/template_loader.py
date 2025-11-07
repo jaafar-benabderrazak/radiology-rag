@@ -171,6 +171,10 @@ class TemplateLoader:
         # Detect category from filename or title
         category = self._detect_category(title, docx_path.stem)
 
+        # Detect language from template content (title + skeleton)
+        full_text = title + '\n' + skeleton
+        language = self._detect_language(full_text)
+
         # Store the formatting metadata as JSON string for database storage
         formatting_metadata = json.dumps(paragraphs_formatting)
 
@@ -180,6 +184,7 @@ class TemplateLoader:
             'keywords': keywords,
             'skeleton': skeleton,
             'category': category,
+            'language': language,
             'is_active': True,
             'formatting_metadata': formatting_metadata
         }
@@ -212,6 +217,54 @@ class TemplateLoader:
 
         return 'General'
 
+    def _detect_language(self, text: str) -> str:
+        """
+        Detect language from template text content
+
+        Uses simple keyword-based detection for French, English, Arabic, etc.
+        Returns ISO 639-1 language code: 'fr', 'en', 'ar', etc.
+        """
+        text_lower = text.lower()
+
+        # French indicators (common medical terms and section headers)
+        french_indicators = [
+            'échographie', 'irm', 'tomodensitométrie', 'radiographie',
+            'indication', 'technique', 'résultats', 'conclusion',
+            'synthèse', 'à remplir', 'données', 'examen', 'patient',
+            'médecin', 'hôpital', 'étude', 'corps', 'poumons',
+            'cœur', 'abdomen', 'cerveau', 'colonne', 'genou',
+            'cheville', 'épaule', 'rachis', 'biliaire', 'hépatique',
+            'mammaire', 'entéro', 'entier', 'cervical', 'lombaire'
+        ]
+
+        # English indicators
+        english_indicators = [
+            'indication', 'technique', 'findings', 'impression',
+            'conclusion', 'fill', 'patient', 'study', 'examination',
+            'physician', 'hospital', 'chest', 'abdomen', 'brain',
+            'spine', 'knee', 'ankle', 'shoulder', 'liver', 'kidney',
+            'unremarkable', 'normal', 'abnormal'
+        ]
+
+        # Arabic indicators
+        arabic_indicators = ['المريض', 'الفحص', 'النتائج', 'الاستنتاج', 'التقنية']
+
+        # Count occurrences
+        french_count = sum(1 for word in french_indicators if word in text_lower)
+        english_count = sum(1 for word in english_indicators if word in text_lower)
+        arabic_count = sum(1 for word in arabic_indicators if word in text_lower)
+
+        # Return language with highest count
+        if french_count > english_count and french_count > arabic_count:
+            return 'fr'
+        elif arabic_count > 0:
+            return 'ar'
+        elif english_count > 0:
+            return 'en'
+        else:
+            # Default to French for backward compatibility
+            return 'fr'
+
 
 def load_templates_from_files(templates_dir: Optional[str] = None) -> List[Dict]:
     """
@@ -235,6 +288,7 @@ DEFAULT_TEMPLATES = [
         "title": "CT Pulmonary Angiography – Pulmonary Embolism",
         "keywords": ["ctpa", "pulmonary embolism", "pe", "angiography", "dyspnea"],
         "category": "CT",
+        "language": "en",
         "skeleton": """Radiology Report
 Referring Physician: {referrer}
 Reporting Radiologist: {doctor_name}
@@ -269,6 +323,7 @@ Signed electronically by {doctor_name}, {study_datetime}
         "title": "Chest X-ray – Normal",
         "keywords": ["cxr", "xray", "chest", "radiograph"],
         "category": "X-Ray",
+        "language": "en",
         "skeleton": """Radiology Report
 Referring Physician: {referrer}
 Reporting Radiologist: {doctor_name}

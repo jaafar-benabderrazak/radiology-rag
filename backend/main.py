@@ -309,7 +309,18 @@ Accession/ID: {meta.accession}
         for i, case in enumerate(similar_cases, 1):
             user_prompt += f"\n{i}. {case['text'][:200]}... (similarity: {case['score']:.2f})\n"
 
+    # Determine language instruction based on template language
+    template_lang = getattr(template, 'language', 'fr')  # Default to French if not set
+    language_instructions = {
+        'fr': "IMPORTANT: Generate the ENTIRE report in FRENCH. All medical terminology and text must be in French.",
+        'en': "IMPORTANT: Generate the ENTIRE report in ENGLISH. All medical terminology and text must be in English.",
+        'ar': "IMPORTANT: Generate the ENTIRE report in ARABIC. All medical terminology and text must be in Arabic (right-to-left)."
+    }
+    lang_instruction = language_instructions.get(template_lang, language_instructions['fr'])
+
     user_prompt += f"""
+
+{lang_instruction}
 
 INSTRUCTIONS:
 You must produce a complete radiology report following the template below EXACTLY.
@@ -317,14 +328,15 @@ You must produce a complete radiology report following the template below EXACTL
 - Replace ALL <fill>, <à remplir>, and similar placeholders with appropriate clinical findings
 - Base your findings on the indication text above
 - Fill EVERY section - leave NO placeholders unfilled
-- Use professional medical terminology
+- Use professional medical terminology in {template_lang.upper()}
 - Output plain text only (no markdown, no code blocks, no backticks)
+- The report MUST be in the SAME LANGUAGE as the template ({template_lang.upper()})
 
 TEMPLATE TO FOLLOW:
 
 {formatted_skeleton}
 
-Now generate the COMPLETE report with all placeholders filled:
+Now generate the COMPLETE report with all placeholders filled IN {template_lang.upper()}:
 """.strip()
 
     # Call Gemini - combine system instructions with user prompt
@@ -438,7 +450,8 @@ Now generate the COMPLETE report with all placeholders filled:
             referrer=meta.referrer,
             indication=req.input,
             generated_report=report_text,
-            study_datetime=meta.study_datetime
+            study_datetime=meta.study_datetime,
+            report_language=template_lang  # Save the report language from template
         )
         db.add(report)
         db.commit()

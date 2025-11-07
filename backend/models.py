@@ -18,6 +18,7 @@ class Template(Base):
     keywords = Column(JSON, nullable=False)  # Store as JSON array
     skeleton = Column(Text, nullable=False)
     category = Column(String(100), nullable=True)
+    language = Column(String(10), nullable=True, default='fr')  # Template language: 'fr', 'en', etc.
     is_active = Column(Boolean, default=True)
     formatting_metadata = Column(Text, nullable=True)  # JSON string with formatting info
     created_at = Column(DateTime, default=datetime.utcnow)
