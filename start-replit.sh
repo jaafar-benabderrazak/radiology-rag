@@ -51,7 +51,12 @@ else
     print_warning "Using system Python: $PYTHON_BIN"
 fi
 
-$PYTHON_BIN -c "from database import Base, engine; Base.metadata.create_all(bind=engine); print('Database initialized')"
+# Run init_db.py to create tables and load templates
+echo "  Loading templates from .docx files..."
+$PYTHON_BIN init_db.py || {
+    print_warning "init_db.py failed, trying basic table creation..."
+    $PYTHON_BIN -c "from database import Base, engine; Base.metadata.create_all(bind=engine); print('Tables created')"
+}
 print_success "Database ready"
 
 # Start the backend server (which now serves the frontend)

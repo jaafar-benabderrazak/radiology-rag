@@ -14,8 +14,28 @@ from docx.text.run import Run
 class TemplateLoader:
     """Loads radiology templates from Word documents"""
 
-    def __init__(self, templates_dir: str = "/app/templates"):
-        self.templates_dir = Path(templates_dir)
+    def __init__(self, templates_dir: Optional[str] = None):
+        # Try multiple possible locations for templates directory
+        if templates_dir:
+            self.templates_dir = Path(templates_dir)
+        else:
+            # Try different paths based on environment
+            possible_paths = [
+                Path("/app/templates"),  # Docker container
+                Path(__file__).parent.parent / "templates",  # Relative to backend folder
+                Path.cwd() / "templates",  # Current working directory
+                Path("/home/runner/workspace/templates"),  # Replit deployment
+            ]
+
+            for path in possible_paths:
+                if path.exists() and path.is_dir():
+                    self.templates_dir = path
+                    print(f"✓ Found templates directory: {path}")
+                    break
+            else:
+                # Default to relative path if none found
+                self.templates_dir = Path(__file__).parent.parent / "templates"
+                print(f"⚠ Using default templates path: {self.templates_dir}")
 
     def load_all_templates(self) -> List[Dict]:
         """Load all .docx templates from the templates directory"""
@@ -193,9 +213,13 @@ class TemplateLoader:
         return 'General'
 
 
-def load_templates_from_files(templates_dir: str = "/app/templates") -> List[Dict]:
+def load_templates_from_files(templates_dir: Optional[str] = None) -> List[Dict]:
     """
     Convenience function to load all templates from directory
+
+    Args:
+        templates_dir: Optional path to templates directory. If not provided,
+                      will auto-detect based on environment.
 
     Returns:
         List of template dictionaries ready for database insertion
