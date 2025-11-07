@@ -1,0 +1,65 @@
+# Exclude heavy dependencies from deployment
+pyproject.toml
+pyproject.toml.backup
+uv.lock
+.venv/
+venv/
+
+# Development files
+.git/
+.github/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Build artifacts (will be rebuilt)
+frontend/dist/
+frontend/build/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Database files (local only)
+*.db
+*.sqlite
+*.sqlite3
+backend/*.sqlite*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed for deployment)
+docs/
+*.md
+!README.md
+
+# Test files
+tests/
+test_*.py
+*_test.py
