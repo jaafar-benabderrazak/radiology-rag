@@ -101,6 +101,46 @@ async def startup_event():
                 logger.error(f"Failed to connect to database after {max_retries} attempts: {e}")
                 print(f"⚠ Database connection failed. Running in limited mode.")
                 print(f"⚠ Please check your DATABASE_URL configuration.")
+                return
+
+    # Load templates from .docx files if database is empty
+    try:
+        from template_loader import load_templates_from_files, DEFAULT_TEMPLATES
+
+        db = next(get_db())
+        template_count = db.query(Template).count()
+
+        if template_count == 0:
+            print("\nLoading templates from files...")
+
+            # Try to load from .docx files
+            templates_data = load_templates_from_files()
+
+            # If no .docx files found, use default templates
+            if not templates_data:
+                print("⚠ No template files found, using default templates")
+                templates_data = DEFAULT_TEMPLATES
+
+            # Insert templates into database
+            for tpl_data in templates_data:
+                template = Template(**tpl_data)
+                db.add(template)
+
+            db.commit()
+            print(f"✓ Loaded {len(templates_data)} templates successfully")
+
+            # Print loaded templates
+            for tpl in templates_data:
+                print(f"  - {tpl['title']} ({tpl['category']})")
+        else:
+            print(f"✓ Found {template_count} existing templates in database")
+
+        db.close()
+    except Exception as e:
+        logger.error(f"Error loading templates: {e}")
+        print(f"⚠ Failed to load templates: {e}")
+        import traceback
+        traceback.print_exc()
 
     # Initialize services (already done in their constructors)
     print("✓ Cache service initialized")
