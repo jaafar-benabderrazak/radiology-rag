@@ -329,14 +329,49 @@ Now generate the COMPLETE report with all placeholders filled:
 
     # Call Gemini - combine system instructions with user prompt
     # Gemini doesn't support "system" role in messages
-    model = genai.GenerativeModel(
-        model_name=settings.GEMINI_MODEL,
-        system_instruction=SYSTEM_INSTRUCTIONS
-    )
-    resp = model.generate_content(user_prompt)
+    try:
+        model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            system_instruction=SYSTEM_INSTRUCTIONS
+        )
+        resp = model.generate_content(user_prompt)
 
-    # Extract text
-    report_text = (resp.text or "").strip()
+        # Extract text
+        report_text = (resp.text or "").strip()
+
+        if not report_text:
+            raise HTTPException(
+                status_code=500,
+                detail="Gemini API returned empty response. Please try again."
+            )
+    except HTTPException:
+        # Re-raise HTTPException without modification
+        raise
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Gemini API error: {error_msg}")
+
+        # Provide user-friendly error messages based on error type
+        if "API_KEY" in error_msg.upper() or "PERMISSION_DENIED" in error_msg:
+            raise HTTPException(
+                status_code=500,
+                detail="Invalid or missing Gemini API key. Please check your GEMINI_API_KEY in Replit Secrets."
+            )
+        elif "QUOTA" in error_msg.upper() or "RESOURCE_EXHAUSTED" in error_msg:
+            raise HTTPException(
+                status_code=429,
+                detail="Gemini API quota exceeded. Please try again later or upgrade your API plan."
+            )
+        elif "RATE_LIMIT" in error_msg.upper():
+            raise HTTPException(
+                status_code=429,
+                detail="Too many requests. Please wait a moment and try again."
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to generate report: {error_msg}"
+            )
 
     # Generate highlights - extract key phrases from IMPRESSION/CONCLUSION section
     highlights: List[str] = []
