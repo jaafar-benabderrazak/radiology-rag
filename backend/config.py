@@ -11,8 +11,8 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        # Use Replit DATABASE_URL if available, otherwise construct from parts
-        return os.getenv("DATABASE_URL") or f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        # Use Replit DATABASE_URL if available, otherwise use SQLite for local development
+        return os.getenv("DATABASE_URL") or "sqlite:///./radiology_db.sqlite"
 
     # Redis
     REDIS_HOST: str = os.getenv("REDIS_HOST", "redis")
