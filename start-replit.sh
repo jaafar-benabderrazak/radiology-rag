@@ -32,45 +32,26 @@ if [ -z "$GEMINI_API_KEY" ] && [ -z "$GOOGLE_API_KEY" ]; then
 fi
 print_success "API key configured"
 
-# Install Python dependencies
-echo ""
-echo "2. Installing Python dependencies..."
-cd backend
-if [ -f "requirements.txt" ]; then
-    pip install -q -r requirements.txt
-    print_success "Python dependencies installed"
-else
-    print_error "requirements.txt not found"
-    exit 1
-fi
-cd ..
-
-# Install Node.js dependencies and build frontend
-echo ""
-echo "3. Building frontend..."
-cd frontend
-
-if [ ! -d "node_modules" ]; then
-    echo "  Installing Node.js dependencies (first time only)..."
-    npm install --silent
-fi
-
-echo "  Building React application..."
-npm run build --silent
-
-if [ -d "dist" ]; then
-    print_success "Frontend built successfully"
-else
-    print_error "Frontend build failed"
-    exit 1
-fi
-cd ..
+# Note: Package installation is handled by Replit's build step
+# During deployment, the build command already runs:
+# - pip install -r backend/requirements.txt
+# - cd frontend && npm install && npm run build
 
 # Initialize database
 echo ""
-echo "4. Initializing database..."
+echo "2. Initializing database..."
 cd backend
-python -c "from database import Base, engine; Base.metadata.create_all(bind=engine); print('Database initialized')"
+
+# Find Python executable (Replit manages this)
+if [ -f "../.pythonlibs/bin/python" ]; then
+    PYTHON_BIN="../.pythonlibs/bin/python"
+    print_success "Using Replit Python: $PYTHON_BIN"
+else
+    PYTHON_BIN="python"
+    print_warning "Using system Python: $PYTHON_BIN"
+fi
+
+$PYTHON_BIN -c "from database import Base, engine; Base.metadata.create_all(bind=engine); print('Database initialized')"
 print_success "Database ready"
 
 # Start the backend server (which now serves the frontend)
@@ -80,7 +61,14 @@ echo "  Starting server..."
 echo "======================================================================"
 echo ""
 print_success "Server starting on port 8000"
-print_success "Frontend and API available at: https://${REPL_SLUG}.${REPL_OWNER}.repl.co"
+
+# Show access URL based on environment
+if [ -n "$REPL_SLUG" ] && [ -n "$REPL_OWNER" ]; then
+    print_success "Frontend and API available at: https://${REPL_SLUG}.${REPL_OWNER}.repl.co"
+else
+    print_success "Running locally on: http://localhost:8000"
+fi
+
 echo ""
 echo "  Access from any device using the URL above"
 echo "  Frontend routes: /, /reports, /templates, etc."
@@ -88,5 +76,5 @@ echo "  API routes: /api/*, /generate, /templates, etc."
 echo ""
 echo "======================================================================"
 
-# Start uvicorn
-exec python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# Start uvicorn (use the same Python executable)
+exec $PYTHON_BIN -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
