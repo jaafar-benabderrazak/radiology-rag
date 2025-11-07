@@ -11,7 +11,7 @@ channel = "stable-23_11"
 
 [deployment]
 run = ["bash", "start-replit.sh"]
-build = ["bash", "-c", "cd frontend && npm install && npm run build"]
+build = ["bash", "build-replit.sh"]
 deploymentTarget = "cloudrun"
 
 [env]
