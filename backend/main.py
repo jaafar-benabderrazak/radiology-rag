@@ -86,6 +86,14 @@ async def startup_event():
                 print(f"⚠ Please check your DATABASE_URL configuration.")
                 return
 
+    # Run database migrations
+    try:
+        from migrate_db import migrate_add_language_column
+        migrate_add_language_column()
+    except Exception as e:
+        logger.warning(f"Migration warning: {e}")
+        print(f"⚠ Migration note: {e}")
+
     # Load templates from .docx files if database is empty
     try:
         from template_loader import load_templates_from_files, DEFAULT_TEMPLATES
