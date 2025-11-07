@@ -215,17 +215,8 @@ def format_skeleton(skeleton: str, meta: Meta, indication: str) -> str:
     )
 
 # ---------- API Endpoints ----------
-
-@app.get("/")
-async def root():
-    """Health check endpoint"""
-    return {
-        "status": "online",
-        "service": "Radiology RAG API",
-        "version": "1.0.0",
-        "cache_enabled": cache.enabled,
-        "vector_db_enabled": vector_service.client is not None
-    }
+# Note: Root path "/" is handled by SPA catch-all at end of file
+# Use /health for API health checks
 
 @app.get("/templates", response_model=List[TemplateResponse])
 async def list_templates(db: Session = Depends(get_db)):
@@ -745,6 +736,15 @@ async def health_check():
 # Catch-all route to serve frontend for all unmatched paths
 # ============================================================
 if FRONTEND_DIST_PATH.exists() and FRONTEND_DIST_PATH.is_dir():
+    index_path = FRONTEND_DIST_PATH / "index.html"
+
+    @app.get("/")
+    async def serve_root():
+        """Serve frontend SPA for root path"""
+        if index_path.exists():
+            return FileResponse(index_path)
+        raise HTTPException(status_code=404, detail="Frontend not found")
+
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         """
@@ -752,7 +752,6 @@ if FRONTEND_DIST_PATH.exists() and FRONTEND_DIST_PATH.is_dir():
         This must be defined LAST so API routes are matched first.
         """
         # Serve index.html for SPA routing
-        index_path = FRONTEND_DIST_PATH / "index.html"
         if index_path.exists():
             return FileResponse(index_path)
         raise HTTPException(status_code=404, detail="Frontend not found")
