@@ -1,0 +1,28 @@
+# Replit configuration for Radiology RAG
+# This configuration runs both frontend and backend on the same port
+
+run = "bash start-replit.sh"
+entrypoint = "backend/main.py"
+language = "python3"
+
+[nix]
+channel = "stable-23_11"
+
+[deployment]
+run = ["bash", "start-replit.sh"]
+build = ["bash", "-c", "pip install -r backend/requirements.txt && cd frontend && npm install && npm run build"]
+deploymentTarget = "cloudrun"
+
+[env]
+PYTHONUNBUFFERED = "1"
+ENVIRONMENT = "production"
+
+[[ports]]
+localPort = 8000
+externalPort = 80
+
+[languages.python3]
+pattern = "**/*.py"
+
+[languages.javascript]
+pattern = "**/{*.js,*.jsx,*.ts,*.tsx}"

@@ -1,9 +1,11 @@
 # main.py
 import os
 from typing import List, Optional, Literal
+from pathlib import Path
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -41,6 +43,32 @@ app.add_middleware(
 # Include authentication routers
 app.include_router(auth_router.router)
 app.include_router(users_router.router)
+
+# Serve frontend static files for Replit deployment
+# Check if frontend build directory exists
+FRONTEND_DIST_PATH = Path(__file__).parent.parent / "frontend" / "dist"
+if FRONTEND_DIST_PATH.exists() and FRONTEND_DIST_PATH.is_dir():
+    print(f"✓ Serving frontend from: {FRONTEND_DIST_PATH}")
+
+    # Mount static assets (JS, CSS, images)
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST_PATH / "assets")), name="assets")
+
+    # Serve index.html for all non-API routes (SPA fallback)
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Serve frontend for all non-API routes"""
+        # Skip API routes
+        if full_path.startswith(("api/", "templates", "generate", "reports", "health", "cache")):
+            raise HTTPException(status_code=404, detail="Not found")
+
+        # Serve index.html for all other routes (SPA routing)
+        index_path = FRONTEND_DIST_PATH / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path)
+        raise HTTPException(status_code=404, detail="Frontend not found")
+else:
+    print(f"⚠ Frontend dist directory not found at: {FRONTEND_DIST_PATH}")
+    print("  Run 'cd frontend && npm run build' to build the frontend")
 
 # Create tables on startup
 @app.on_event("startup")

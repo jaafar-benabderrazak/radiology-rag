@@ -1,25 +1,54 @@
 const getApiBase = () => {
+  console.log('[API Config] Detecting API base URL...')
+
+  // Priority 1: Environment variable
   if (import.meta.env.VITE_API_BASE) {
+    console.log('[API Config] Using VITE_API_BASE:', import.meta.env.VITE_API_BASE)
     return import.meta.env.VITE_API_BASE
   }
+
+  // Priority 2: Runtime config (set by backend)
   if (typeof window !== 'undefined' && (window as any).__API_BASE__) {
+    console.log('[API Config] Using window.__API_BASE__:', (window as any).__API_BASE__)
     return (window as any).__API_BASE__
   }
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    // In production (Replit/deployed), frontend and backend are on the same origin
-    const protocol = window.location.protocol
+
+  // Priority 3: Production environment detection
+  if (typeof window !== 'undefined') {
     const hostname = window.location.hostname
+    const protocol = window.location.protocol
     const port = window.location.port
-    // Include port if it's not default (80/443)
-    if (port && port !== '80' && port !== '443') {
-      return `${protocol}//${hostname}:${port}`
+
+    console.log('[API Config] Window location:', {
+      protocol,
+      hostname,
+      port,
+      origin: window.location.origin
+    })
+
+    // If not localhost, assume production deployment where frontend and backend are same origin
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      let apiBase: string
+
+      // For Replit and most deployments, use same origin
+      if (port && port !== '80' && port !== '443') {
+        apiBase = `${protocol}//${hostname}:${port}`
+      } else {
+        apiBase = `${protocol}//${hostname}`
+      }
+
+      console.log('[API Config] Production mode - Using same origin:', apiBase)
+      return apiBase
     }
-    return `${protocol}//${hostname}`
   }
+
+  // Priority 4: Local development fallback
+  console.log('[API Config] Local development mode - Using localhost:8000')
   return 'http://localhost:8000'
 }
 
 const base = getApiBase()
+console.log('[API Config] Final API base URL:', base)
 
 // Export base URL for components that need direct fetch calls
 export const API_BASE = base
