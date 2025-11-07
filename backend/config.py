@@ -3,15 +3,16 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Database
-    POSTGRES_USER: str = os.getenv("POSTGRES_USER", "radiology_user")
-    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "secure_password")
-    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "radiology_templates")
-    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "postgres")
-    POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
+    POSTGRES_USER: str = os.getenv("PGUSER", os.getenv("POSTGRES_USER", "radiology_user"))
+    POSTGRES_PASSWORD: str = os.getenv("PGPASSWORD", os.getenv("POSTGRES_PASSWORD", "secure_password"))
+    POSTGRES_DB: str = os.getenv("PGDATABASE", os.getenv("POSTGRES_DB", "radiology_templates"))
+    POSTGRES_HOST: str = os.getenv("PGHOST", os.getenv("POSTGRES_HOST", "postgres"))
+    POSTGRES_PORT: str = os.getenv("PGPORT", os.getenv("POSTGRES_PORT", "5432"))
 
     @property
     def DATABASE_URL(self) -> str:
-        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        # Use Replit DATABASE_URL if available, otherwise construct from parts
+        return os.getenv("DATABASE_URL") or f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     # Redis
     REDIS_HOST: str = os.getenv("REDIS_HOST", "redis")

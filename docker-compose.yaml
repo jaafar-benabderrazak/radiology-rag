@@ -11,8 +11,8 @@ services:
       - PYTHONUNBUFFERED=1
       - EMBEDDING_MODEL=all-MiniLM-L6-v2
       - TEMPLATES_DIR=/app/templates
-      - GOOGLE_API_KEY=AIzaSyCzPWaJ2-QcviSPB8FmyvYLe_RD0zIcp9M
-      - GEMINI_API_KEY=AIzaSyCzPWaJ2-QcviSPB8FmyvYLe_RD0zIcp9M
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_MODEL=models/gemini-2.0-flash
       # Database
       - POSTGRES_USER=radiology_user

@@ -2,9 +2,16 @@
 from typing import List, Optional, Dict, Any
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
-from sentence_transformers import SentenceTransformer
 from config import settings
 import uuid
+
+try:
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    print("⚠ sentence-transformers not available")
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+    SentenceTransformer = None
 
 class VectorService:
     def __init__(self):
@@ -21,8 +28,12 @@ class VectorService:
             )
 
             # Initialize embedding model
-            print(f"Loading embedding model: {self.embedding_model_name}...")
-            self.embedding_model = SentenceTransformer(self.embedding_model_name)
+            if SENTENCE_TRANSFORMERS_AVAILABLE:
+                print(f"Loading embedding model: {self.embedding_model_name}...")
+                self.embedding_model = SentenceTransformer(self.embedding_model_name)
+            else:
+                print(f"⚠ Vector service disabled: Qdrant=True, SentenceTransformers=False")
+                self.embedding_model = None
 
             # Create collection if it doesn't exist
             self._ensure_collection()
