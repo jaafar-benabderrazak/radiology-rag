@@ -29,6 +29,10 @@ externalPort = 80
 localPort = 8000
 externalPort = 8000
 
+[[ports]]
+localPort = 39313
+externalPort = 3001
+
 [agent]
 expertMode = true
 integrations = ["python_database:1.0.0"]
@@ -53,13 +57,13 @@ args = "frontend"
 name = "backend"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 waitForPort = 8000
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[workflows.workflow]]
 name = "frontend"
