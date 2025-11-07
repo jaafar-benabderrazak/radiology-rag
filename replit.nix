@@ -1,5 +1,6 @@
 { pkgs }: {
   deps = [
+    pkgs.redis
     pkgs.gcc-unwrapped
     pkgs.python311
     pkgs.python311Packages.pip

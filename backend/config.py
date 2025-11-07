@@ -25,12 +25,12 @@ class Settings(BaseSettings):
         return db_url or "sqlite:///./radiology_db.sqlite"
 
     # Redis
-    REDIS_HOST: str = os.getenv("REDIS_HOST", "redis")
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
 
     # Qdrant
-    QDRANT_HOST: str = os.getenv("QDRANT_HOST", "qdrant")
+    QDRANT_HOST: str = os.getenv("QDRANT_HOST", "localhost")
     QDRANT_PORT: int = int(os.getenv("QDRANT_PORT", "6333"))
     QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "radiology_reports")
 
