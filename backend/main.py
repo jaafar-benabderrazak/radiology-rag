@@ -64,7 +64,7 @@ async def startup_event():
     print("=" * 60)
 
     # Create tables if they don't exist
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine, checkfirst=True)
     print("✓ Database tables ready")
 
     # Initialize services (already done in their constructors)
