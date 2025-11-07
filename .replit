@@ -11,7 +11,7 @@ channel = "stable-23_11"
 packages = ["cargo", "ffmpeg-full", "libiconv", "libjpeg_turbo", "libpng", "libxcrypt", "pkg-config", "rustc", "which"]
 
 [deployment]
-run = ["bash", "-c", "cd backend && uvicorn main:app --host 0.0.0.0 --port 5000"]
+run = ["bash", "-c", "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 5000"]
 build = ["bash", "build-replit.sh"]
 deploymentTarget = "autoscale"
 
@@ -36,8 +36,8 @@ localPort = 8000
 externalPort = 8000
 
 [[ports]]
-localPort = 44933
-externalPort = 3002
+localPort = 42047
+externalPort = 3003
 
 [languages.python3]
 pattern = "**/*.py"
