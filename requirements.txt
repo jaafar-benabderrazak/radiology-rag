@@ -1,0 +1,7 @@
+# Root requirements file for Replit deployment
+# This signals to Replit's deployment system to use pip instead of uv
+#
+# The actual dependencies are in backend/requirements-minimal.txt
+# This file includes them via relative path
+
+-r backend/requirements-minimal.txt

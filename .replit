@@ -35,10 +35,6 @@ externalPort = 3001
 localPort = 8000
 externalPort = 8000
 
-[[ports]]
-localPort = 42047
-externalPort = 3003
-
 [languages.python3]
 pattern = "**/*.py"
 
