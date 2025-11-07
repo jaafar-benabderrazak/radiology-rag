@@ -20,7 +20,9 @@ class BackupService:
     def __init__(self):
         # Backup configuration from environment
         self.backup_enabled = os.getenv("BACKUP_ENABLED", "true").lower() == "true"
-        self.backup_dir = Path(os.getenv("BACKUP_DIR", "/app/backups"))
+        # Use writable directory for Replit/local environments
+        default_backup_dir = os.getenv("BACKUP_DIR", "./backups")
+        self.backup_dir = Path(default_backup_dir).resolve()
         self.retention_days = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
         self.max_backups = int(os.getenv("MAX_BACKUPS", "50"))
 

@@ -18,7 +18,9 @@ class DICOMService:
     def __init__(self):
         # Configuration
         self.enabled = os.getenv("DICOM_ENABLED", "true").lower() == "true"
-        self.upload_dir = Path(os.getenv("DICOM_UPLOAD_DIR", "/app/dicom_storage"))
+        # Use writable directory for Replit/local environments  
+        default_dicom_dir = os.getenv("DICOM_UPLOAD_DIR", "./dicom_storage")
+        self.upload_dir = Path(default_dicom_dir).resolve()
         self.max_file_size = int(os.getenv("DICOM_MAX_FILE_SIZE", "104857600"))  # 100MB default
 
         # Create storage directory

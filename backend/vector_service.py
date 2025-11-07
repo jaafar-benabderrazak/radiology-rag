@@ -1,16 +1,42 @@
 """Qdrant vector database service for semantic search"""
 from typing import List, Optional, Dict, Any
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
-from sentence_transformers import SentenceTransformer
 from config import settings
 import uuid
+
+# Optional imports - gracefully handle when packages are not available
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+    QDRANT_AVAILABLE = True
+except ImportError:
+    print("⚠ qdrant-client not available")
+    QdrantClient = None
+    QDRANT_AVAILABLE = False
+
+try:
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    print("⚠ sentence-transformers not available")
+    SentenceTransformer = None
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 class VectorService:
     def __init__(self):
         self.collection_name = settings.QDRANT_COLLECTION
         self.embedding_model_name = "all-MiniLM-L6-v2"  # 384 dimensions
         self.embedding_dim = 384
+        self.client = None
+        self.embedding_model = None
+
+        # Check if required packages are available
+        if not QDRANT_AVAILABLE:
+            print("⚠ Vector service disabled: Qdrant client not available")
+            return
+        
+        if not SENTENCE_TRANSFORMERS_AVAILABLE:
+            print("⚠ Vector service disabled: SentenceTransformers not available")
+            return
 
         try:
             # Initialize Qdrant client
@@ -29,7 +55,7 @@ class VectorService:
 
             print(f"✓ Qdrant connected: {settings.QDRANT_HOST}:{settings.QDRANT_PORT}")
         except Exception as e:
-            print(f"⚠ Qdrant initialization failed: {e}")
+            print(f"⚠ Vector service disabled: Qdrant={QDRANT_AVAILABLE}, SentenceTransformers={SENTENCE_TRANSFORMERS_AVAILABLE}")
             self.client = None
             self.embedding_model = None
 

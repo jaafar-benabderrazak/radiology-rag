@@ -11,6 +11,11 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
+        # Check if DATABASE_URL is explicitly set (for Replit/custom deployments)
+        explicit_url = os.getenv("DATABASE_URL")
+        if explicit_url:
+            return explicit_url
+        # Default to PostgreSQL if DB credentials are set
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     # Redis
