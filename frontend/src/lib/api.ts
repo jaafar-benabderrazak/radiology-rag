@@ -1,6 +1,28 @@
-const base = import.meta.env.VITE_API_BASE || (typeof window !== 'undefined'
-  ? (window as any).__API_BASE__ || 'http://localhost:8000'
-  : 'http://localhost:8000')
+const getApiBase = () => {
+  if (import.meta.env.VITE_API_BASE) {
+    return import.meta.env.VITE_API_BASE
+  }
+  if (typeof window !== 'undefined' && (window as any).__API_BASE__) {
+    return (window as any).__API_BASE__
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    // In production (Replit/deployed), frontend and backend are on the same origin
+    const protocol = window.location.protocol
+    const hostname = window.location.hostname
+    const port = window.location.port
+    // Include port if it's not default (80/443)
+    if (port && port !== '80' && port !== '443') {
+      return `${protocol}//${hostname}:${port}`
+    }
+    return `${protocol}//${hostname}`
+  }
+  return 'http://localhost:8000'
+}
+
+const base = getApiBase()
+
+// Export base URL for components that need direct fetch calls
+export const API_BASE = base
 
 // Token management
 const TOKEN_KEY = 'auth_token'
