@@ -65,6 +65,54 @@ async def startup_event():
     Base.metadata.create_all(bind=engine)
     print("✓ Database tables ready")
 
+    # Initialize default users (idempotent - only creates if they don't exist)
+    from database import SessionLocal
+    from models import User, UserRole
+    from auth import get_password_hash
+    
+    db = SessionLocal()
+    try:
+        # Check and create admin user
+        admin_email = "admin@radiology.com"
+        if not db.query(User).filter(User.email == admin_email).first():
+            admin_user = User(
+                email=admin_email,
+                username="admin",
+                full_name="System Administrator",
+                hashed_password=get_password_hash("admin123"),
+                role=UserRole.ADMIN,
+                hospital_name="Radiology System",
+                is_active=True,
+                is_verified=True
+            )
+            db.add(admin_user)
+            print("✓ Created default admin user (admin@radiology.com / admin123)")
+        
+        # Check and create doctor user
+        doctor_email = "doctor@hospital.com"
+        if not db.query(User).filter(User.email == doctor_email).first():
+            doctor_user = User(
+                email=doctor_email,
+                username="doctor",
+                full_name="Dr. Sample Doctor",
+                hashed_password=get_password_hash("doctor123"),
+                role=UserRole.DOCTOR,
+                hospital_name="General Hospital",
+                specialization="Radiology",
+                license_number="RAD-12345",
+                is_active=True,
+                is_verified=True
+            )
+            db.add(doctor_user)
+            print("✓ Created default doctor user (doctor@hospital.com / doctor123)")
+        
+        db.commit()
+    except Exception as e:
+        print(f"⚠ Note: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
     # Initialize services (already done in their constructors)
     print("✓ Cache service initialized")
     print("✓ Vector service initialized")

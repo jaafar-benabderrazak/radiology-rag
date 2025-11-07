@@ -9,7 +9,7 @@ channel = "stable-23_11"
 packages = ["libxcrypt"]
 
 [deployment]
-run = ["sh", "-c", "cd backend && python init_db.py && python -m uvicorn main:app --host 0.0.0.0 --port 5000"]
+run = ["sh", "-c", "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 5000"]
 deploymentTarget = "autoscale"
 build = ["sh", "-c", "cd frontend && npm install && npm run build"]
 
@@ -29,12 +29,9 @@ externalPort = 80
 localPort = 8000
 externalPort = 8000
 
-[[ports]]
-localPort = 38285
-externalPort = 3001
-
 [agent]
 expertMode = true
+integrations = ["python_database:1.0.0"]
 
 [workflows]
 runButton = "Project"
