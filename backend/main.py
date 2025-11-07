@@ -3,10 +3,12 @@ import os
 from typing import List, Optional, Literal
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime
+from pathlib import Path
 
 # Google Generative AI
 import google.generativeai as genai
@@ -205,9 +207,9 @@ def format_skeleton(skeleton: str, meta: Meta, indication: str) -> str:
 
 # ---------- API Endpoints ----------
 
-@app.get("/")
-async def root():
-    """Health check endpoint"""
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring"""
     return {
         "status": "online",
         "service": "Radiology RAG API",
@@ -786,13 +788,25 @@ async def clear_cache():
     cache.clear()
     return {"status": "success", "message": "Cache cleared"}
 
-@app.get("/health")
-async def health_check():
-    """Detailed health check"""
-    return {
-        "status": "healthy",
-        "database": "connected",
-        "cache": "enabled" if cache.enabled else "disabled",
-        "vector_db": "connected" if vector_service.client else "disconnected",
-        "gemini_model": settings.GEMINI_MODEL
-    }
+# ---------- Serve Frontend Static Files ----------
+# Mount static files for the React frontend (must be last to not override API routes)
+frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
+if frontend_dist.exists():
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+    
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Serve React frontend for all non-API routes"""
+        # Check if it's an API route - if so, let FastAPI handle it normally
+        if full_path.startswith("api/") or full_path.startswith("health"):
+            raise HTTPException(status_code=404)
+        
+        # Serve index.html for all frontend routes (SPA routing)
+        index_path = frontend_dist / "index.html"
+        if index_path.exists():
+            with open(index_path, "r", encoding="utf-8") as f:
+                return HTMLResponse(content=f.read())
+        raise HTTPException(status_code=404, detail="Frontend not built")
+else:
+    print(f"⚠ Frontend dist not found at {frontend_dist}")
+    print("  Run 'cd frontend && npm run build' to build the frontend")
