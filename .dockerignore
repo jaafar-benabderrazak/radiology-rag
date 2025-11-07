@@ -5,10 +5,15 @@ uv.lock
 .venv/
 venv/
 
+# CRITICAL: Exclude cache directories (7GB+!)
+.cache/
+.uv/
+.pythonlibs/
+__pycache__/
+
 # Development files
 .git/
 .github/
-__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -22,13 +27,25 @@ htmlcov/
 *.swp
 *.swo
 
-# Node modules
+# Node modules (will be reinstalled during build)
 node_modules/
 frontend/node_modules/
+npm-debug.log*
 
-# Build artifacts (will be rebuilt)
+# Build artifacts (will be rebuilt during deployment)
 frontend/dist/
 frontend/build/
+
+# Template files (not needed in production)
+templates/
+backend/templates/*.docx
+
+# Local development databases and services
+*.db
+*.sqlite
+*.sqlite3
+backend/*.sqlite*
+radiology_db.sqlite
 
 # Logs
 *.log
