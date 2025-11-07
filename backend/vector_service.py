@@ -1,10 +1,25 @@
 """Qdrant vector database service for semantic search"""
 from typing import List, Optional, Dict, Any
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
 from config import settings
 import uuid
 
+# Conditional import for Qdrant
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+    QDRANT_AVAILABLE = True
+except ImportError:
+    print("⚠ qdrant-client not available - vector search will be disabled")
+    QDRANT_AVAILABLE = False
+    QdrantClient = None
+    Distance = None
+    VectorParams = None
+    PointStruct = None
+    Filter = None
+    FieldCondition = None
+    MatchValue = None
+
+# Conditional import for SentenceTransformers
 try:
     from sentence_transformers import SentenceTransformer
     SENTENCE_TRANSFORMERS_AVAILABLE = True
@@ -18,6 +33,12 @@ class VectorService:
         self.collection_name = settings.QDRANT_COLLECTION
         self.embedding_model_name = "all-MiniLM-L6-v2"  # 384 dimensions
         self.embedding_dim = 384
+
+        if not QDRANT_AVAILABLE:
+            self.client = None
+            self.embedding_model = None
+            print("⚠ Vector service disabled: qdrant-client not installed")
+            return
 
         try:
             # Initialize Qdrant client with short timeout for Cloud Run deployment

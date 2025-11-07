@@ -2,13 +2,25 @@
 import json
 import hashlib
 from typing import Optional, Any
-import redis
 from config import settings
+
+# Conditional import for Redis
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    print("⚠ redis module not available - caching will be disabled")
+    REDIS_AVAILABLE = False
+    redis = None
 
 class CacheService:
     def __init__(self):
-        self.enabled = settings.CACHE_ENABLED
-        if self.enabled:
+        self.enabled = settings.CACHE_ENABLED and REDIS_AVAILABLE
+        if not REDIS_AVAILABLE:
+            self.enabled = False
+            self.redis_client = None
+            print("⚠ Caching disabled: redis module not installed")
+        elif self.enabled:
             try:
                 self.redis_client = redis.Redis(
                     host=settings.REDIS_HOST,
