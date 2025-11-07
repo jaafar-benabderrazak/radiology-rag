@@ -65,13 +65,13 @@ echo "======================================================================"
 echo "  Starting server..."
 echo "======================================================================"
 echo ""
-print_success "Server starting on port 8000"
+print_success "Server starting on port 5000"
 
 # Show access URL based on environment
 if [ -n "$REPL_SLUG" ] && [ -n "$REPL_OWNER" ]; then
     print_success "Frontend and API available at: https://${REPL_SLUG}.${REPL_OWNER}.repl.co"
 else
-    print_success "Running locally on: http://localhost:8000"
+    print_success "Running locally on: http://localhost:5000"
 fi
 
 echo ""
@@ -82,4 +82,5 @@ echo ""
 echo "======================================================================"
 
 # Start uvicorn (use the same Python executable)
-exec $PYTHON_BIN -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# IMPORTANT: Port 5000 is required for Replit Cloud Run deployment (first localPort in .replit)
+exec $PYTHON_BIN -m uvicorn main:app --host 0.0.0.0 --port 5000

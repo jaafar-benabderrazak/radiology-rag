@@ -15,13 +15,14 @@ class CacheService:
                     port=settings.REDIS_PORT,
                     db=settings.REDIS_DB,
                     decode_responses=True,
-                    socket_connect_timeout=5
+                    socket_connect_timeout=0.5,  # Fail fast for Cloud Run deployment
+                    socket_timeout=1.0
                 )
-                # Test connection
+                # Test connection with short timeout
                 self.redis_client.ping()
                 print(f"✓ Redis connected: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
             except Exception as e:
-                print(f"⚠ Redis connection failed: {e}. Caching disabled.")
+                print(f"⚠ Redis unavailable ({type(e).__name__}). Caching disabled.")
                 self.enabled = False
                 self.redis_client = None
         else:

@@ -20,11 +20,11 @@ class VectorService:
         self.embedding_dim = 384
 
         try:
-            # Initialize Qdrant client
+            # Initialize Qdrant client with short timeout for Cloud Run deployment
             self.client = QdrantClient(
                 host=settings.QDRANT_HOST,
                 port=settings.QDRANT_PORT,
-                timeout=10
+                timeout=1.0  # Fail fast - reduced from 10s
             )
 
             # Initialize embedding model
@@ -35,12 +35,12 @@ class VectorService:
                 print(f"⚠ Vector service disabled: Qdrant=True, SentenceTransformers=False")
                 self.embedding_model = None
 
-            # Create collection if it doesn't exist
+            # Create collection if it doesn't exist (with timeout protection)
             self._ensure_collection()
 
             print(f"✓ Qdrant connected: {settings.QDRANT_HOST}:{settings.QDRANT_PORT}")
         except Exception as e:
-            print(f"⚠ Qdrant initialization failed: {e}")
+            print(f"⚠ Qdrant unavailable ({type(e).__name__}). Vector search disabled.")
             self.client = None
             self.embedding_model = None
 
