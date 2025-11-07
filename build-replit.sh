@@ -6,7 +6,10 @@ echo "Building Radiology RAG for deployment..."
 # Install minimal Python dependencies for Cloud Run (avoids 8GB limit)
 echo "Installing minimal Python dependencies..."
 cd backend
-pip install -q -r requirements-minimal.txt
+
+# Use pip instead of uv for installation
+pip install --no-cache-dir -r requirements-minimal.txt
+
 cd ..
 
 # Build frontend
