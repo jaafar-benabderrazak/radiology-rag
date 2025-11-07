@@ -11,8 +11,18 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        # Use Replit DATABASE_URL if available, otherwise use SQLite for local development
-        return os.getenv("DATABASE_URL") or "sqlite:///./radiology_db.sqlite"
+        # Priority: Deployment DATABASE_URL > Development DATABASE_URL > SQLite fallback
+        # For deployments, check if DATABASE_URL points to a production database
+        db_url = os.getenv("DATABASE_URL")
+        
+        # If DATABASE_URL points to development host 'helium', use SQLite instead
+        # This prevents deployment from trying to connect to dev database
+        if db_url and "helium" in db_url:
+            print("⚠ Development DATABASE_URL detected, using SQLite for local environment")
+            return "sqlite:///./radiology_db.sqlite"
+        
+        # Use DATABASE_URL if available (deployment), otherwise SQLite (local)
+        return db_url or "sqlite:///./radiology_db.sqlite"
 
     # Redis
     REDIS_HOST: str = os.getenv("REDIS_HOST", "redis")

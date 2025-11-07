@@ -74,13 +74,32 @@ else:
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and services on startup"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     print("=" * 60)
     print("Starting Radiology RAG Backend...")
     print("=" * 60)
 
-    # Create tables if they don't exist
-    Base.metadata.create_all(bind=engine)
-    print("✓ Database tables ready")
+    # Create tables if they don't exist with retry logic
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            Base.metadata.create_all(bind=engine)
+            print("✓ Database tables ready")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Database connection attempt {attempt + 1} failed: {e}. Retrying in {retry_delay}s...")
+                import time
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                logger.error(f"Failed to connect to database after {max_retries} attempts: {e}")
+                print(f"⚠ Database connection failed. Running in limited mode.")
+                print(f"⚠ Please check your DATABASE_URL configuration.")
 
     # Initialize services (already done in their constructors)
     print("✓ Cache service initialized")
