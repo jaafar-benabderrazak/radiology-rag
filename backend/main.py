@@ -44,29 +44,12 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(users_router.router)
 
-# Serve frontend static files for Replit deployment
-# Check if frontend build directory exists
+# Store frontend path for later use (SPA routing will be added at the end)
 FRONTEND_DIST_PATH = Path(__file__).parent.parent / "frontend" / "dist"
 if FRONTEND_DIST_PATH.exists() and FRONTEND_DIST_PATH.is_dir():
     print(f"✓ Serving frontend from: {FRONTEND_DIST_PATH}")
-
     # Mount static assets (JS, CSS, images)
     app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST_PATH / "assets")), name="assets")
-
-    # Serve index.html for all non-API routes (SPA fallback)
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        """Serve frontend for all non-API routes"""
-        # Skip API routes and direct file requests
-        api_prefixes = ("api/", "auth/", "users/", "templates", "generate", "reports", "health", "cache", "docs", "openapi.json", "redoc")
-        if full_path.startswith(api_prefixes):
-            raise HTTPException(status_code=404, detail="Not found")
-
-        # Serve index.html for all other routes (SPA routing), including root
-        index_path = FRONTEND_DIST_PATH / "index.html"
-        if index_path.exists():
-            return FileResponse(index_path)
-        raise HTTPException(status_code=404, detail="Frontend not found")
 else:
     print(f"⚠ Frontend dist directory not found at: {FRONTEND_DIST_PATH}")
     print("  Run 'cd frontend && npm run build' to build the frontend")
@@ -756,3 +739,20 @@ async def health_check():
         "vector_db": "connected" if vector_service.client else "disconnected",
         "gemini_model": settings.GEMINI_MODEL
     }
+
+# ============================================================
+# SPA Frontend Routing - MUST BE LAST!
+# Catch-all route to serve frontend for all unmatched paths
+# ============================================================
+if FRONTEND_DIST_PATH.exists() and FRONTEND_DIST_PATH.is_dir():
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """
+        Serve frontend SPA for all unmatched routes.
+        This must be defined LAST so API routes are matched first.
+        """
+        # Serve index.html for SPA routing
+        index_path = FRONTEND_DIST_PATH / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path)
+        raise HTTPException(status_code=404, detail="Frontend not found")
