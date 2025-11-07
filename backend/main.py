@@ -57,11 +57,12 @@ if FRONTEND_DIST_PATH.exists() and FRONTEND_DIST_PATH.is_dir():
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         """Serve frontend for all non-API routes"""
-        # Skip API routes
-        if full_path.startswith(("api/", "templates", "generate", "reports", "health", "cache")):
+        # Skip API routes and direct file requests
+        api_prefixes = ("api/", "auth/", "users/", "templates", "generate", "reports", "health", "cache", "docs", "openapi.json", "redoc")
+        if full_path.startswith(api_prefixes):
             raise HTTPException(status_code=404, detail="Not found")
 
-        # Serve index.html for all other routes (SPA routing)
+        # Serve index.html for all other routes (SPA routing), including root
         index_path = FRONTEND_DIST_PATH / "index.html"
         if index_path.exists():
             return FileResponse(index_path)
