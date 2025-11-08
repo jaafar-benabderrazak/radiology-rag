@@ -105,10 +105,13 @@ export default function Pricing() {
             💎 Simple, Transparent Pricing
           </Badge>
           <h1 className="text-4xl font-bold leading-tight tracking-tighter md:text-6xl lg:leading-[1.1]">
-            Choose Your Plan
+            Invest in Your Peace of Mind
           </h1>
           <p className="max-w-[750px] text-lg text-muted-foreground sm:text-xl">
-            Start with a 14-day free trial. No credit card required. Cancel anytime.
+            Choose the plan that best fits your needs. All plans include HIPAA compliance, security, and regular updates.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            No credit card required • 14-day free trial • Cancel anytime
           </p>
         </div>
       </section>

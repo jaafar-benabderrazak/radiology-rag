@@ -8,22 +8,22 @@ type Language = 'en' | 'fr'
 const translations = {
   en: {
     appName: 'VitaScribe',
-    tagline: 'AI-Powered Medical Reports',
-    taglineHighlight: 'In Seconds',
-    heroSubtitle: 'Transform clinical indications into comprehensive, structured radiology reports using advanced AI. Save time, improve consistency, and enhance patient care.',
+    tagline: 'Stop Drowning in Reports.',
+    taglineHighlight: 'Start Caring for Patients.',
+    heroSubtitle: 'VitaScribe is your AI-powered radiology scribe that transforms clinical indications into comprehensive reports in seconds. Because you became a radiologist to diagnose and heal, not to battle documentation backlogs.',
     signIn: 'Sign In',
-    getStarted: 'Get Started',
-    startFreeTrial: 'Start Free Trial',
-    watchDemo: 'Watch Demo',
-    features: 'Powerful Features for Modern Radiology',
-    featuresSubtitle: 'Everything you need to streamline your radiology workflow',
-    howItWorks: 'How It Works',
-    howItWorksSubtitle: 'Simple, fast, and accurate - in just 3 steps',
-    testimonials: 'Trusted by Radiologists Worldwide',
-    testimonialsSubtitle: 'See what healthcare professionals are saying',
-    ctaTitle: 'Ready to Transform Your Radiology Practice?',
-    ctaSubtitle: 'Join hundreds of radiologists using AI to improve efficiency and patient care',
-    ctaNote: 'No credit card required • 14-day free trial • Cancel anytime',
+    getStarted: 'Get Started Free',
+    startFreeTrial: 'Try Free for 14 Days',
+    watchDemo: 'See How It Works',
+    features: 'Your Voice. Your Reports. Your Scribe.',
+    featuresSubtitle: 'VitaScribe adapts to how you work, delivering precision, speed, and peace of mind',
+    howItWorks: 'Transform Your Workflow',
+    howItWorksSubtitle: 'From clinical indication to comprehensive report in seconds',
+    testimonials: 'Trusted by Healthcare Professionals',
+    testimonialsSubtitle: 'Join radiologists who\'ve reclaimed their time and passion for patient care',
+    ctaTitle: 'Your Peace of Mind is Priceless',
+    ctaSubtitle: 'Whether you\'re drowning in documentation, need increased precision, or simply want more time with patients, VitaScribe adapts to how you work',
+    ctaNote: 'No credit card required • HIPAA compliant • Cancel anytime',
     welcomeBack: 'Welcome Back',
     createAccount: 'Create Account',
     signInSubtitle: 'Sign in to continue to VitaScribe',
@@ -39,9 +39,9 @@ const translations = {
     hasAccount: 'Already have an account?',
     signUp: 'Sign up',
     stats: {
-      timeSaved: 'Time Saved',
-      reports: 'Reports Generated',
-      radiologists: 'Radiologists'
+      timeSaved: 'Hours Saved Weekly',
+      reports: 'Documentation Backlog',
+      radiologists: 'Faster Reports'
     },
     featuresList: {
       aiPowered: {
@@ -94,22 +94,22 @@ const translations = {
   },
   fr: {
     appName: 'VitaScribe',
-    tagline: 'Rapports Médicaux par IA',
-    taglineHighlight: 'En Quelques Secondes',
-    heroSubtitle: "Transformez les indications cliniques en rapports radiologiques complets et structurés grâce à l'IA avancée. Gagnez du temps, améliorez la cohérence et optimisez les soins aux patients.",
+    tagline: 'Arrêtez de Vous Noyer dans les Rapports.',
+    taglineHighlight: 'Concentrez-vous sur les Patients.',
+    heroSubtitle: "VitaScribe est votre assistant IA qui transforme les indications cliniques en rapports complets en quelques secondes. Parce que vous êtes devenu radiologue pour diagnostiquer et soigner, pas pour combattre les retards de documentation.",
     signIn: 'Se Connecter',
-    getStarted: 'Commencer',
-    startFreeTrial: 'Essai Gratuit',
-    watchDemo: 'Voir la Démo',
-    features: 'Fonctionnalités Puissantes pour la Radiologie Moderne',
-    featuresSubtitle: 'Tout ce dont vous avez besoin pour optimiser votre flux de travail radiologique',
-    howItWorks: 'Comment Ça Marche',
-    howItWorksSubtitle: 'Simple, rapide et précis - en 3 étapes seulement',
-    testimonials: 'Approuvé par des Radiologues du Monde Entier',
-    testimonialsSubtitle: 'Découvrez ce que disent les professionnels de santé',
-    ctaTitle: 'Prêt à Transformer Votre Pratique Radiologique?',
-    ctaSubtitle: "Rejoignez des centaines de radiologues qui utilisent l'IA pour améliorer l'efficacité et les soins aux patients",
-    ctaNote: 'Aucune carte bancaire requise • Essai gratuit de 14 jours • Annulation à tout moment',
+    getStarted: 'Commencer Gratuitement',
+    startFreeTrial: 'Essai Gratuit 14 Jours',
+    watchDemo: 'Voir Comment Ça Marche',
+    features: 'Votre Voix. Vos Rapports. Votre Assistant.',
+    featuresSubtitle: 'VitaScribe s\'adapte à votre façon de travailler, offrant précision, rapidité et tranquillité d\'esprit',
+    howItWorks: 'Transformez Votre Flux de Travail',
+    howItWorksSubtitle: 'De l\'indication clinique au rapport complet en quelques secondes',
+    testimonials: 'Approuvé par les Professionnels de Santé',
+    testimonialsSubtitle: 'Rejoignez les radiologues qui ont retrouvé leur temps et leur passion pour les soins aux patients',
+    ctaTitle: 'Votre Tranquillité d\'Esprit N\'a Pas de Prix',
+    ctaSubtitle: 'Que vous soyez submergé par la documentation, que vous ayez besoin de plus de précision ou simplement de plus de temps avec les patients, VitaScribe s\'adapte à vous',
+    ctaNote: 'Aucune carte bancaire • Conforme HIPAA • Annulation à tout moment',
     welcomeBack: 'Bienvenue',
     createAccount: 'Créer un Compte',
     signInSubtitle: 'Connectez-vous pour continuer sur VitaScribe',
@@ -125,9 +125,9 @@ const translations = {
     hasAccount: 'Vous avez déjà un compte?',
     signUp: "S'inscrire",
     stats: {
-      timeSaved: 'Temps Gagné',
-      reports: 'Rapports Générés',
-      radiologists: 'Radiologues'
+      timeSaved: 'Heures Gagnées/Semaine',
+      reports: 'Retard de Documentation',
+      radiologists: 'Rapports Plus Rapides'
     },
     featuresList: {
       aiPowered: {
@@ -293,15 +293,15 @@ export default function Landing() {
             </p>
             <div className="hero-stats animate-slide-up">
               <div className="stat">
-                <div className="stat-number">90%</div>
+                <div className="stat-number">8+</div>
                 <div className="stat-label">{t.stats.timeSaved}</div>
               </div>
               <div className="stat">
-                <div className="stat-number">10k+</div>
+                <div className="stat-number">Zero</div>
                 <div className="stat-label">{t.stats.reports}</div>
               </div>
               <div className="stat">
-                <div className="stat-number">500+</div>
+                <div className="stat-number">6x</div>
                 <div className="stat-label">{t.stats.radiologists}</div>
               </div>
             </div>
