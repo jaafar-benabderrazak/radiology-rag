@@ -120,6 +120,28 @@ export interface TemplateUpdateRequest {
   is_active?: boolean
 }
 
+export interface ReportHistory {
+  id: number
+  patient_name: string | null
+  accession: string | null
+  indication: string
+  template_title: string
+  created_at: string
+}
+
+export interface ReportDetail {
+  id: number
+  template_title: string
+  patient_name: string | null
+  accession: string | null
+  doctor_name: string | null
+  hospital_name: string | null
+  indication: string
+  generated_report: string
+  study_datetime: string | null
+  created_at: string
+}
+
 export interface GenerateRequest {
   input: string
   templateId?: string
@@ -403,4 +425,25 @@ export async function deleteTemplate(templateId: string): Promise<void> {
     }
     throw new Error(await res.text())
   }
+}
+
+// Report History API
+export async function fetchReportHistory(limit: number = 50, skip: number = 0): Promise<ReportHistory[]> {
+  const res = await fetch(`${base}/reports/history?limit=${limit}&skip=${skip}`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function fetchReportDetail(reportId: number): Promise<ReportDetail> {
+  const res = await fetch(`${base}/reports/${reportId}`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
 }

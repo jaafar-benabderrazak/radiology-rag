@@ -551,6 +551,9 @@ export default function ReportGenerator() {
                   <span className="user-hospital">{user.hospital_name || 'Radiology System'}</span>
                 </div>
               )}
+              <Link to="/history" className="history-link">
+                📊 History
+              </Link>
               {user && user.role === 'admin' && (
                 <Link to="/admin" className="admin-link">
                   ⚙️ Admin
@@ -1077,6 +1080,25 @@ export default function ReportGenerator() {
         .admin-link:hover {
           transform: translateY(-1px);
           box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .history-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1.25rem;
+          background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+          color: white;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 0.95rem;
+          transition: all 0.2s;
+        }
+
+        .history-link:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(72, 187, 120, 0.4);
         }
 
         .language-selector {

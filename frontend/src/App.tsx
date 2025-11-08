@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import Landing from './pages/Landing'
 import ReportGenerator from './pages/ReportGenerator'
+import ReportHistory from './pages/ReportHistory'
 import Admin from './pages/Admin'
 
 // Protected Route wrapper
@@ -40,6 +41,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ReportGenerator />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <ReportHistory />
             </ProtectedRoute>
           }
         />

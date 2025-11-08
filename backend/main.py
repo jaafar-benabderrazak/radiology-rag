@@ -89,7 +89,9 @@ async def startup_event():
     # Run database migrations
     try:
         from migrate_db import migrate_add_language_column
+        from migrate_reports import migrate_add_user_id_to_reports
         migrate_add_language_column()
+        migrate_add_user_id_to_reports()
     except Exception as e:
         logger.warning(f"Migration warning: {e}")
         print(f"⚠ Migration note: {e}")
@@ -586,6 +588,7 @@ Now generate the COMPLETE report with all placeholders filled IN {template_lang.
     try:
         report = Report(
             template_id=template.id,
+            user_id=current_user.id,  # Track which user generated this report
             patient_name=meta.patient_name,
             accession=meta.accession,
             doctor_name=meta.doctorName,
@@ -621,14 +624,18 @@ Now generate the COMPLETE report with all placeholders filled IN {template_lang.
 
 @app.get("/reports/history", response_model=List[ReportHistoryResponse])
 async def get_report_history(
-    limit: int = 10,
-    db: Session = Depends(get_db)
+    limit: int = 50,
+    skip: int = 0,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Get report generation history"""
+    """Get report generation history for current user"""
     reports = (
         db.query(Report)
         .join(Template)
+        .filter(Report.user_id == current_user.id)  # Filter by current user
         .order_by(Report.created_at.desc())
+        .offset(skip)
         .limit(limit)
         .all()
     )
@@ -646,11 +653,18 @@ async def get_report_history(
     ]
 
 @app.get("/reports/{report_id}")
-async def get_report(report_id: int, db: Session = Depends(get_db)):
-    """Get a specific report by ID"""
-    report = db.query(Report).filter(Report.id == report_id).first()
+async def get_report(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get a specific report by ID (must be owned by current user)"""
+    report = db.query(Report).filter(
+        Report.id == report_id,
+        Report.user_id == current_user.id  # Ensure user owns this report
+    ).first()
     if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise HTTPException(status_code=404, detail="Report not found or access denied")
 
     return {
         "id": report.id,
@@ -669,7 +683,8 @@ async def get_report(report_id: int, db: Session = Depends(get_db)):
 async def download_report_word(
     report_id: int,
     highlight: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Download a report as Word document (.docx)
@@ -678,10 +693,13 @@ async def download_report_word(
         report_id: The report ID
         highlight: Whether to highlight AI-generated content (default: False)
     """
-    # Get report from database
-    report = db.query(Report).filter(Report.id == report_id).first()
+    # Get report from database (ensure user owns it)
+    report = db.query(Report).filter(
+        Report.id == report_id,
+        Report.user_id == current_user.id
+    ).first()
     if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise HTTPException(status_code=404, detail="Report not found or access denied")
 
     # Get template for formatting metadata
     template = report.template
@@ -717,7 +735,8 @@ async def download_report_word(
 @app.get("/reports/{report_id}/download/pdf")
 async def download_report_pdf(
     report_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Download a report as PDF document
@@ -725,10 +744,13 @@ async def download_report_pdf(
     Args:
         report_id: The report ID
     """
-    # Get report from database
-    report = db.query(Report).filter(Report.id == report_id).first()
+    # Get report from database (ensure user owns it)
+    report = db.query(Report).filter(
+        Report.id == report_id,
+        Report.user_id == current_user.id
+    ).first()
     if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise HTTPException(status_code=404, detail="Report not found or access denied")
 
     # Get template for formatting metadata
     template = report.template

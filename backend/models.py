@@ -32,6 +32,7 @@ class Report(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     template_id = Column(Integer, ForeignKey("templates.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # User who generated the report
     patient_name = Column(String(200), nullable=True)
     accession = Column(String(100), nullable=True, index=True)
     doctor_name = Column(String(200), nullable=True)
@@ -54,8 +55,9 @@ class Report(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationship to template
+    # Relationships
     template = relationship("Template", back_populates="reports")
+    user = relationship("User", back_populates="reports")
 
 class SimilarCase(Base):
     __tablename__ = "similar_cases"
@@ -85,6 +87,9 @@ class User(Base):
     is_verified = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationship to reports
+    reports = relationship("Report", back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"
