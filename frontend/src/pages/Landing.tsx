@@ -4,18 +4,65 @@ import { useAuth } from '../contexts/AuthContext'
 
 export default function Landing() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, login, register } = useAuth()
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+
+  // Auth form state
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [username, setUsername] = useState('')
+  const [hospitalName, setHospitalName] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleGetStarted = () => {
     setAuthMode('register')
     setShowAuthModal(true)
+    setError('')
   }
 
   const handleSignIn = () => {
     setAuthMode('login')
     setShowAuthModal(true)
+    setError('')
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await login(email, password)
+      setShowAuthModal(false)
+      navigate('/app')
+    } catch (err: any) {
+      setError(err.message || 'Login failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await register({
+        email,
+        username,
+        full_name: fullName,
+        password,
+        hospital_name: hospitalName
+      })
+      setShowAuthModal(false)
+      navigate('/app')
+    } catch (err: any) {
+      setError(err.message || 'Registration failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -343,28 +390,103 @@ export default function Landing() {
                 : 'Start your free trial today'}
             </p>
 
-            <div className="auth-notice">
-              <p>⚠️ Authentication integration in progress</p>
-              <p>For now, navigate directly to the app:</p>
+            <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="auth-form">
+              <div className="form-field">
+                <label className="form-label">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="form-input"
+                  placeholder="doctor@hospital.com"
+                />
+              </div>
+
+              {authMode === 'register' && (
+                <>
+                  <div className="form-field">
+                    <label className="form-label">Username</label>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                      className="form-input"
+                      placeholder="dr_smith"
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label">Full Name</label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                      className="form-input"
+                      placeholder="Dr. John Smith"
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label">Hospital (Optional)</label>
+                    <input
+                      type="text"
+                      value={hospitalName}
+                      onChange={(e) => setHospitalName(e.target.value)}
+                      className="form-input"
+                      placeholder="General Hospital"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="form-field">
+                <label className="form-label">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="form-input"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              {error && (
+                <div className="auth-error">
+                  <span className="error-icon">⚠️</span>
+                  {error}
+                </div>
+              )}
+
               <button
-                className="btn-primary"
-                onClick={() => navigate('/app')}
-                style={{ marginTop: '1rem', width: '100%' }}
+                type="submit"
+                disabled={loading}
+                className="btn-submit"
               >
-                Go to App
+                {loading ? 'Please wait...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
               </button>
-            </div>
+
+              {authMode === 'login' && (
+                <div className="demo-credentials">
+                  <strong>Demo credentials:</strong><br />
+                  Email: doctor@hospital.com<br />
+                  Password: doctor123
+                </div>
+              )}
+            </form>
 
             <div className="auth-switch">
               {authMode === 'login' ? (
                 <p>
                   Don't have an account?{' '}
-                  <button onClick={() => setAuthMode('register')}>Sign up</button>
+                  <button onClick={() => { setAuthMode('register'); setError('') }}>Sign up</button>
                 </p>
               ) : (
                 <p>
                   Already have an account?{' '}
-                  <button onClick={() => setAuthMode('login')}>Sign in</button>
+                  <button onClick={() => { setAuthMode('login'); setError('') }}>Sign in</button>
                 </p>
               )}
             </div>
@@ -950,6 +1072,8 @@ export default function Landing() {
           max-width: 450px;
           width: 90%;
           position: relative;
+          max-height: 90vh;
+          overflow-y: auto;
         }
 
         .modal-close {
@@ -961,6 +1085,10 @@ export default function Landing() {
           font-size: 2rem;
           color: #9ca3af;
           cursor: pointer;
+        }
+
+        .modal-close:hover {
+          color: #4b5563;
         }
 
         .auth-title {
@@ -975,22 +1103,90 @@ export default function Landing() {
           margin-bottom: 2rem;
         }
 
-        .auth-notice {
-          background: #fef3c7;
-          border: 1px solid #fbbf24;
-          padding: 1.5rem;
-          border-radius: 8px;
-          text-align: center;
-          color: #92400e;
+        .auth-form {
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
         }
 
-        .auth-notice p {
-          margin: 0.5rem 0;
+        .form-field {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .form-label {
+          font-weight: 600;
+          color: #4b5563;
+          font-size: 0.95rem;
+        }
+
+        .form-input {
+          width: 100%;
+          padding: 0.75rem 1rem;
+          border: 2px solid #e5e7eb;
+          border-radius: 8px;
+          font-size: 1rem;
+          transition: all 0.2s;
+        }
+
+        .form-input:focus {
+          outline: none;
+          border-color: #667eea;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .auth-error {
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #dc2626;
+          padding: 0.75rem 1rem;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.9rem;
+        }
+
+        .error-icon {
+          font-size: 1.1rem;
+        }
+
+        .btn-submit {
+          width: 100%;
+          padding: 0.875rem 1.5rem;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 1rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-submit:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .demo-credentials {
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          padding: 1rem;
+          border-radius: 8px;
+          font-size: 0.85rem;
+          color: #0c4a6e;
         }
 
         .auth-switch {
           text-align: center;
-          margin-top: 2rem;
+          margin-top: 1.5rem;
           color: #6b7280;
         }
 
@@ -1000,6 +1196,7 @@ export default function Landing() {
           color: #667eea;
           font-weight: 600;
           cursor: pointer;
+          font-size: 1rem;
         }
 
         .auth-switch button:hover {
