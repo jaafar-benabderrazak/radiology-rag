@@ -9,5 +9,6 @@
     pkgs.nodePackages.npm
     pkgs.bash
     pkgs.git
+    pkgs.libreoffice
   ];
 }
