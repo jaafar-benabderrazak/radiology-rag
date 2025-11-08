@@ -131,7 +131,7 @@ Patient avec dyspnée aiguë et douleur thoracique pleurétique. D-dimères éle
   }
 }
 
-export default function Home() {
+export default function ReportGenerator() {
   const { user } = useAuth()
 
   // Language state - default to French
