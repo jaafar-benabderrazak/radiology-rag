@@ -23,11 +23,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // For now, allow access even if not authenticated (for testing)
-  // In production, uncomment this:
-  // if (!isAuthenticated) {
-  //   return <Navigate to="/" replace />
-  // }
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />
+  }
 
   return <>{children}</>
 }
