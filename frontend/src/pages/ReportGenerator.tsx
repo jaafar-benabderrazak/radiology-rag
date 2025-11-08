@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import {
   fetchTemplates,
@@ -132,7 +132,8 @@ Patient avec dyspnée aiguë et douleur thoracique pleurétique. D-dimères éle
 }
 
 export default function ReportGenerator() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
 
   // Language state - default to French
   const [language, setLanguage] = useState<Language>(() => {
@@ -544,6 +545,12 @@ export default function ReportGenerator() {
               <p className="subtitle">{t.subtitle}</p>
             </div>
             <div className="header-actions">
+              {user && (
+                <div className="user-info">
+                  <span className="user-name">{user.full_name}</span>
+                  <span className="user-hospital">{user.hospital_name || 'Radiology System'}</span>
+                </div>
+              )}
               {user && user.role === 'admin' && (
                 <Link to="/admin" className="admin-link">
                   ⚙️ Admin
@@ -563,6 +570,15 @@ export default function ReportGenerator() {
                   <option value="en">English</option>
                 </select>
               </div>
+              <button
+                onClick={() => {
+                  logout()
+                  navigate('/')
+                }}
+                className="btn-logout"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
@@ -1005,6 +1021,43 @@ export default function ReportGenerator() {
           display: flex;
           align-items: center;
           gap: 1rem;
+          flex-wrap: wrap;
+        }
+
+        .user-info {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          padding: 0.5rem 1rem;
+          background: #f7fafc;
+          border-radius: 8px;
+        }
+
+        .user-name {
+          font-weight: 600;
+          color: #2d3748;
+          font-size: 0.9rem;
+        }
+
+        .user-hospital {
+          font-size: 0.8rem;
+          color: #718096;
+        }
+
+        .btn-logout {
+          padding: 0.5rem 1rem;
+          background: #e53e3e;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+          background: #c53030;
+          transform: translateY(-1px);
         }
 
         .admin-link {
