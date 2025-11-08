@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import AnimatedWorkflow from '../components/AnimatedWorkflow'
 
 type Language = 'en' | 'fr'
 
@@ -400,39 +401,10 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="how-it-works" id="demo">
-        <div className="section-container">
-          <h2 className="section-title">{t.howItWorks}</h2>
-          <p className="section-subtitle">{t.howItWorksSubtitle}</p>
-
-          <div className="steps">
-            <div className="step">
-              <div className="step-number glow">1</div>
-              <div className="step-content">
-                <h3 className="step-title">{t.steps.step1.title}</h3>
-                <p className="step-description">{t.steps.step1.desc}</p>
-              </div>
-            </div>
-
-            <div className="step">
-              <div className="step-number glow">2</div>
-              <div className="step-content">
-                <h3 className="step-title">{t.steps.step2.title}</h3>
-                <p className="step-description">{t.steps.step2.desc}</p>
-              </div>
-            </div>
-
-            <div className="step">
-              <div className="step-number glow">3</div>
-              <div className="step-content">
-                <h3 className="step-title">{t.steps.step3.title}</h3>
-                <p className="step-description">{t.steps.step3.desc}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Advanced Animated Workflow */}
+      <div id="demo">
+        <AnimatedWorkflow language={language} />
+      </div>
 
       {/* Testimonials */}
       <section className="testimonials">
