@@ -9,15 +9,15 @@ from pathlib import Path
 
 from docx import Document
 from docx.shared import Pt, RGBColor, Inches
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_UNDERLINE
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_UNDERLINE, WD_COLOR_INDEX
 
 
 class DocumentGenerator:
     """Generates formatted Word and PDF documents from radiology reports"""
 
     def __init__(self):
-        self.highlight_color = RGBColor(255, 255, 0)  # Yellow highlight for AI content
-        self.ai_text_color = RGBColor(0, 100, 200)  # Blue text for AI content
+        # Yellow background highlighting is applied using WD_COLOR_INDEX.YELLOW
+        pass
 
     def generate_word_document(
         self,
@@ -85,27 +85,36 @@ class DocumentGenerator:
         """
         ai_content_map = {}
 
-        # Common placeholder patterns
+        # Get template lines (structural elements)
+        template_lines = set(line.strip() for line in template_skeleton.split('\n') if line.strip())
+
+        # Remove placeholder patterns from template lines for comparison
         placeholder_patterns = [
             r'<[^>]+>',  # <fill>, <à remplir>, etc.
             r'\{[^}]+\}',  # {patient_name}, etc.
         ]
 
-        # Find all placeholders in template
-        template_placeholders = []
-        for pattern in placeholder_patterns:
-            template_placeholders.extend(re.findall(pattern, template_skeleton))
+        template_structure = set()
+        for line in template_lines:
+            # Remove placeholders to get just structural text
+            clean_line = line
+            for pattern in placeholder_patterns:
+                clean_line = re.sub(pattern, '', clean_line).strip()
+            if clean_line:
+                template_structure.add(clean_line)
 
-        # For each placeholder, find what replaced it in the report
-        for placeholder in template_placeholders:
-            # Escape special regex characters
-            escaped_placeholder = re.escape(placeholder)
+        # Mark each line in report as AI-generated or template
+        for line in report_text.split('\n'):
+            line_stripped = line.strip()
+            if not line_stripped:
+                continue
 
-            # Find what replaced this placeholder in the report
-            # This is a simplified approach - marks content not in template as AI-generated
-            if placeholder not in report_text:
-                # Placeholder was replaced, so that content is AI-generated
-                ai_content_map[placeholder] = True
+            # Check if this line is template structure (headings like FINDINGS:, IMPRESSION:)
+            is_template = any(struct in line_stripped for struct in template_structure)
+
+            # If not template structure, it's AI-generated content
+            if not is_template:
+                ai_content_map[line_stripped] = True
 
         return ai_content_map
 
@@ -160,7 +169,7 @@ class DocumentGenerator:
             is_ai_content = self._is_ai_content(text, ai_content_map)
             run = para.add_run(text)
             if is_ai_content and highlight_ai:
-                run.font.color.rgb = self.ai_text_color
+                run.font.highlight_color = WD_COLOR_INDEX.YELLOW
 
     def _add_simple_paragraph(
         self,
@@ -177,7 +186,7 @@ class DocumentGenerator:
 
         run = para.add_run(text)
         if is_ai_content and highlight_ai:
-            run.font.color.rgb = self.ai_text_color
+            run.font.highlight_color = WD_COLOR_INDEX.YELLOW
 
     def _apply_run_formatting(self, run, formatting: Dict[str, Any], highlight: bool = False):
         """Apply formatting to a run"""
@@ -192,9 +201,9 @@ class DocumentGenerator:
         if formatting.get('font_size'):
             run.font.size = Pt(formatting['font_size'])
 
-        # Highlight AI-generated content
+        # Highlight AI-generated content with yellow background
         if highlight:
-            run.font.color.rgb = self.ai_text_color
+            run.font.highlight_color = WD_COLOR_INDEX.YELLOW
 
     def _is_ai_content(self, text: str, ai_content_map: Dict[str, bool]) -> bool:
         """Check if text is AI-generated content"""
