@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 type Language = 'en' | 'fr'
@@ -535,25 +535,25 @@ export default function Landing() {
             <div className="footer-section">
               <h4 className="footer-title">Product</h4>
               <ul className="footer-links">
-                <li><a href="#features">Features</a></li>
-                <li><a href="#demo">How It Works</a></li>
-                <li><a href="#pricing">Pricing</a></li>
+                <li><Link to="/product/features">Features</Link></li>
+                <li><Link to="/product/how-it-works">How It Works</Link></li>
+                <li><Link to="/product/pricing">Pricing</Link></li>
               </ul>
             </div>
             <div className="footer-section">
               <h4 className="footer-title">Company</h4>
               <ul className="footer-links">
-                <li><a href="#about">About Us</a></li>
-                <li><a href="#contact">Contact</a></li>
-                <li><a href="#careers">Careers</a></li>
+                <li><Link to="/company/about">About Us</Link></li>
+                <li><Link to="/company/contact">Contact</Link></li>
+                <li><Link to="/company/careers">Careers</Link></li>
               </ul>
             </div>
             <div className="footer-section">
               <h4 className="footer-title">Legal</h4>
               <ul className="footer-links">
-                <li><a href="#privacy">Privacy Policy</a></li>
-                <li><a href="#terms">Terms of Service</a></li>
-                <li><a href="#hipaa">HIPAA Compliance</a></li>
+                <li><Link to="/legal/privacy">Privacy Policy</Link></li>
+                <li><Link to="/legal/terms">Terms of Service</Link></li>
+                <li><Link to="/legal/hipaa">HIPAA Compliance</Link></li>
               </ul>
             </div>
           </div>
