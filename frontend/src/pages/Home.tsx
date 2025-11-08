@@ -158,6 +158,9 @@ export default function Home() {
   // Voice input state
   const [isRecording, setIsRecording] = useState(false)
   const [recognition, setRecognition] = useState<any>(null)
+  const [interimText, setInterimText] = useState('')
+  const [voiceError, setVoiceError] = useState<string | null>(null)
+  const [isVoiceSupported, setIsVoiceSupported] = useState(false)
 
   // Highlighting state
   const [showHighlights, setShowHighlights] = useState(true)
@@ -186,9 +189,17 @@ export default function Home() {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
       const recognitionInstance = new SpeechRecognition()
 
+      // Configure recognition
       recognitionInstance.continuous = true
       recognitionInstance.interimResults = true
+      recognitionInstance.maxAlternatives = 3
       recognitionInstance.lang = language === 'fr' ? 'fr-FR' : 'en-US'
+
+      recognitionInstance.onstart = () => {
+        console.log('Voice recognition started')
+        setVoiceError(null)
+        setInterimText('')
+      }
 
       recognitionInstance.onresult = (event: any) => {
         let interimTranscript = ''
@@ -203,29 +214,82 @@ export default function Home() {
           }
         }
 
+        // Update interim text for live feedback
+        setInterimText(interimTranscript)
+
+        // Add final transcript to input
         if (finalTranscript) {
-          setInputText(prev => prev + finalTranscript)
+          setInputText(prev => {
+            const newText = prev + finalTranscript
+            // Clear interim text when we get final text
+            setInterimText('')
+            return newText
+          })
         }
       }
 
       recognitionInstance.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error)
+
+        const errorMessages: Record<string, {fr: string, en: string}> = {
+          'no-speech': {
+            fr: 'Aucune parole détectée. Parlez plus fort ou vérifiez votre microphone.',
+            en: 'No speech detected. Speak louder or check your microphone.'
+          },
+          'audio-capture': {
+            fr: 'Impossible de capturer l\'audio. Vérifiez que votre microphone est connecté.',
+            en: 'Unable to capture audio. Check if your microphone is connected.'
+          },
+          'not-allowed': {
+            fr: 'Accès au microphone refusé. Autorisez l\'accès dans les paramètres de votre navigateur.',
+            en: 'Microphone access denied. Please allow microphone access in browser settings.'
+          },
+          'network': {
+            fr: 'Erreur réseau. Vérifiez votre connexion Internet.',
+            en: 'Network error. Check your internet connection.'
+          },
+          'aborted': {
+            fr: 'Reconnaissance vocale interrompue.',
+            en: 'Voice recognition aborted.'
+          }
+        }
+
+        const errorMsg = errorMessages[event.error] || {
+          fr: `Erreur de reconnaissance vocale: ${event.error}`,
+          en: `Voice recognition error: ${event.error}`
+        }
+
+        setVoiceError(language === 'fr' ? errorMsg.fr : errorMsg.en)
         setIsRecording(false)
-        if (event.error === 'not-allowed') {
-          const message = language === 'fr'
-            ? 'Accès au microphone refusé. Veuillez autoriser l\'accès au microphone dans les paramètres de votre navigateur.'
-            : 'Microphone access denied. Please allow microphone access in your browser settings.'
-          alert(message)
+        setInterimText('')
+
+        // Auto-dismiss error after 5 seconds unless it's a permission error
+        if (event.error !== 'not-allowed') {
+          setTimeout(() => setVoiceError(null), 5000)
         }
       }
 
       recognitionInstance.onend = () => {
-        setIsRecording(false)
+        console.log('Voice recognition ended')
+        // Auto-restart if still in recording mode (handles silence timeout)
+        if (isRecording) {
+          try {
+            recognitionInstance.start()
+          } catch (err) {
+            console.log('Could not restart recognition:', err)
+            setIsRecording(false)
+          }
+        } else {
+          setInterimText('')
+        }
       }
 
       setRecognition(recognitionInstance)
+      setIsVoiceSupported(true)
+    } else {
+      setIsVoiceSupported(false)
     }
-  }, [language])
+  }, [language, isRecording])
 
   // Update recognition language when language changes
   useEffect(() => {
@@ -379,27 +443,54 @@ export default function Home() {
   }
 
   const toggleVoiceInput = () => {
-    if (!recognition) {
+    if (!isVoiceSupported || !recognition) {
       const message = language === 'fr'
-        ? 'La saisie vocale n\'est pas prise en charge par votre navigateur. Veuillez utiliser Chrome, Edge ou Safari.'
+        ? 'La saisie vocale n\'est pas prise en charge par votre navigateur. Utilisez Chrome, Edge ou Safari.'
         : 'Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.'
-      alert(message)
+      setVoiceError(message)
+      setTimeout(() => setVoiceError(null), 5000)
       return
     }
 
     if (isRecording) {
+      // Stop recording
       recognition.stop()
       setIsRecording(false)
+      setInterimText('')
+      setVoiceError(null)
     } else {
+      // Start recording
       try {
+        setVoiceError(null)
         recognition.start()
         setIsRecording(true)
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error starting recognition:', err)
-        const message = language === 'fr'
-          ? 'Impossible de démarrer la saisie vocale. Veuillez réessayer.'
-          : 'Could not start voice input. Please try again.'
-        alert(message)
+
+        // Handle already started error
+        if (err.message && err.message.includes('already started')) {
+          recognition.stop()
+          setTimeout(() => {
+            try {
+              recognition.start()
+              setIsRecording(true)
+            } catch (e) {
+              console.error('Retry failed:', e)
+              setVoiceError(
+                language === 'fr'
+                  ? 'Impossible de démarrer la saisie vocale. Veuillez réessayer.'
+                  : 'Could not start voice input. Please try again.'
+              )
+            }
+          }, 100)
+        } else {
+          setVoiceError(
+            language === 'fr'
+              ? 'Impossible de démarrer la saisie vocale. Vérifiez les autorisations du microphone.'
+              : 'Could not start voice input. Check microphone permissions.'
+          )
+          setTimeout(() => setVoiceError(null), 5000)
+        }
       }
     }
   }
@@ -535,6 +626,20 @@ export default function Home() {
                 placeholder={t.placeholder}
                 rows={8}
               />
+              {isRecording && interimText && (
+                <div className="interim-text">
+                  <span className="interim-label">
+                    {language === 'fr' ? '🎙️ En cours...' : '🎙️ Listening...'}
+                  </span>
+                  <span className="interim-content">{interimText}</span>
+                </div>
+              )}
+              {voiceError && (
+                <div className="voice-error">
+                  <span className="error-icon">⚠️</span>
+                  {voiceError}
+                </div>
+              )}
             </div>
 
             {/* Metadata Section */}
@@ -1066,6 +1171,56 @@ export default function Home() {
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.6; }
+        }
+
+        .interim-text {
+          margin-top: 0.75rem;
+          padding: 0.75rem 1rem;
+          background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+          border-left: 4px solid #0ea5e9;
+          border-radius: 6px;
+          font-size: 0.95rem;
+          color: #0c4a6e;
+          animation: fadeIn 0.3s ease-in;
+        }
+
+        .interim-label {
+          font-weight: 600;
+          margin-right: 0.5rem;
+        }
+
+        .interim-content {
+          font-style: italic;
+          opacity: 0.8;
+        }
+
+        .voice-error {
+          margin-top: 0.75rem;
+          padding: 0.75rem 1rem;
+          background: #fff5f5;
+          border-left: 4px solid #ef4444;
+          border-radius: 6px;
+          font-size: 0.9rem;
+          color: #c53030;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          animation: fadeIn 0.3s ease-in;
+        }
+
+        .error-icon {
+          font-size: 1.1rem;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .select, .textarea, .input-sm {
