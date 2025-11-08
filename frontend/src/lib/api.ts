@@ -88,6 +88,38 @@ export interface Template {
   category: string | null
 }
 
+export interface TemplateDetail {
+  id: number
+  template_id: string
+  title: string
+  keywords: string[]
+  skeleton: string
+  category: string | null
+  language: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string | null
+}
+
+export interface TemplateCreateRequest {
+  template_id: string
+  title: string
+  keywords: string[]
+  skeleton: string
+  category?: string | null
+  language?: string
+  is_active?: boolean
+}
+
+export interface TemplateUpdateRequest {
+  title?: string
+  keywords?: string[]
+  skeleton?: string
+  category?: string | null
+  language?: string
+  is_active?: boolean
+}
+
 export interface GenerateRequest {
   input: string
   templateId?: string
@@ -300,4 +332,75 @@ export async function getCurrentUser(): Promise<User> {
 
 export function logout(): void {
   removeToken()
+}
+
+// Template Management API (Admin only)
+export async function fetchAllTemplates(): Promise<TemplateDetail[]> {
+  const res = await fetch(`${base}/admin/templates`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('Admin access required')
+    }
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function getTemplate(templateId: string): Promise<TemplateDetail> {
+  const res = await fetch(`${base}/templates/${templateId}`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('Admin access required')
+    }
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function createTemplate(templateData: TemplateCreateRequest): Promise<TemplateDetail> {
+  const res = await fetch(`${base}/admin/templates`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(templateData)
+  })
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('Admin access required')
+    }
+    const errorText = await res.text()
+    throw new Error(errorText || 'Failed to create template')
+  }
+  return res.json()
+}
+
+export async function updateTemplate(templateId: string, templateData: TemplateUpdateRequest): Promise<TemplateDetail> {
+  const res = await fetch(`${base}/admin/templates/${templateId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(templateData)
+  })
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('Admin access required')
+    }
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function deleteTemplate(templateId: string): Promise<void> {
+  const res = await fetch(`${base}/admin/templates/${templateId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('Admin access required')
+    }
+    throw new Error(await res.text())
+  }
 }

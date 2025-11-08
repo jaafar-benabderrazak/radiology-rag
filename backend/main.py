@@ -21,7 +21,7 @@ from cache_service import cache
 from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
 from ai_analysis_service import ai_analysis_service
-from auth import get_current_active_user
+from auth import get_current_active_user, get_current_admin_user
 from routers import auth_router, users_router
 
 # Configure Gemini
@@ -172,6 +172,35 @@ class TemplateResponse(BaseModel):
     keywords: List[str]
     category: Optional[str]
 
+class TemplateDetailResponse(BaseModel):
+    id: int
+    template_id: str
+    title: str
+    keywords: List[str]
+    skeleton: str
+    category: Optional[str]
+    language: Optional[str]
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+class TemplateCreateRequest(BaseModel):
+    template_id: str
+    title: str
+    keywords: List[str]
+    skeleton: str
+    category: Optional[str] = None
+    language: Optional[str] = 'fr'
+    is_active: bool = True
+
+class TemplateUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    skeleton: Optional[str] = None
+    category: Optional[str] = None
+    language: Optional[str] = None
+    is_active: Optional[bool] = None
+
 class ReportHistoryResponse(BaseModel):
     id: int
     patient_name: Optional[str]
@@ -240,6 +269,112 @@ async def list_templates(db: Session = Depends(get_db)):
         )
         for t in templates
     ]
+
+@app.get("/admin/templates", response_model=List[TemplateDetailResponse])
+async def list_all_templates(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Get all templates including inactive ones (admin only)"""
+    templates = db.query(Template).order_by(Template.created_at.desc()).all()
+    return templates
+
+@app.get("/templates/{template_id}", response_model=TemplateDetailResponse)
+async def get_template(
+    template_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Get template details by ID (admin only)"""
+    template = db.query(Template).filter(Template.template_id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+@app.post("/admin/templates", response_model=TemplateDetailResponse, status_code=201)
+async def create_template(
+    template_data: TemplateCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Create a new template (admin only)"""
+    # Check if template_id already exists
+    existing = db.query(Template).filter(Template.template_id == template_data.template_id).first()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Template with ID '{template_data.template_id}' already exists"
+        )
+
+    # Create new template
+    new_template = Template(
+        template_id=template_data.template_id,
+        title=template_data.title,
+        keywords=template_data.keywords,
+        skeleton=template_data.skeleton,
+        category=template_data.category,
+        language=template_data.language,
+        is_active=template_data.is_active,
+        created_at=datetime.now(),
+        updated_at=datetime.now()
+    )
+
+    db.add(new_template)
+    db.commit()
+    db.refresh(new_template)
+
+    return new_template
+
+@app.put("/admin/templates/{template_id}", response_model=TemplateDetailResponse)
+async def update_template(
+    template_id: str,
+    template_data: TemplateUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Update an existing template (admin only)"""
+    template = db.query(Template).filter(Template.template_id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Update fields if provided
+    if template_data.title is not None:
+        template.title = template_data.title
+    if template_data.keywords is not None:
+        template.keywords = template_data.keywords
+    if template_data.skeleton is not None:
+        template.skeleton = template_data.skeleton
+    if template_data.category is not None:
+        template.category = template_data.category
+    if template_data.language is not None:
+        template.language = template_data.language
+    if template_data.is_active is not None:
+        template.is_active = template_data.is_active
+
+    template.updated_at = datetime.now()
+
+    db.commit()
+    db.refresh(template)
+
+    return template
+
+@app.delete("/admin/templates/{template_id}", status_code=204)
+async def delete_template(
+    template_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Soft delete a template by marking it as inactive (admin only)"""
+    template = db.query(Template).filter(Template.template_id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    template.is_active = False
+    template.updated_at = datetime.now()
+
+    db.commit()
+
+    return None
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(
