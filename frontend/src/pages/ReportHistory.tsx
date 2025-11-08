@@ -115,7 +115,7 @@ export default function ReportHistory() {
             {user && (
               <div className="user-info">
                 <span className="user-name">{user.full_name}</span>
-                <span className="user-hospital">{user.hospital_name || 'Radiology System'}</span>
+                <span className="user-hospital">{user.hospital_name || 'VitaScribe'}</span>
               </div>
             )}
             <button onClick={() => navigate('/app')} className="btn-secondary">

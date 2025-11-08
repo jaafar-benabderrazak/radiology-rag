@@ -548,7 +548,7 @@ export default function ReportGenerator() {
               {user && (
                 <div className="user-info">
                   <span className="user-name">{user.full_name}</span>
-                  <span className="user-hospital">{user.hospital_name || 'Radiology System'}</span>
+                  <span className="user-hospital">{user.hospital_name || 'VitaScribe'}</span>
                 </div>
               )}
               <Link to="/history" className="history-link">

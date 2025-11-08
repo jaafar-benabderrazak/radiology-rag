@@ -2,9 +2,187 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
+type Language = 'en' | 'fr'
+
+const translations = {
+  en: {
+    appName: 'VitaScribe',
+    tagline: 'AI-Powered Medical Reports',
+    taglineHighlight: 'In Seconds',
+    heroSubtitle: 'Transform clinical indications into comprehensive, structured radiology reports using advanced AI. Save time, improve consistency, and enhance patient care.',
+    signIn: 'Sign In',
+    getStarted: 'Get Started',
+    startFreeTrial: 'Start Free Trial',
+    watchDemo: 'Watch Demo',
+    features: 'Powerful Features for Modern Radiology',
+    featuresSubtitle: 'Everything you need to streamline your radiology workflow',
+    howItWorks: 'How It Works',
+    howItWorksSubtitle: 'Simple, fast, and accurate - in just 3 steps',
+    testimonials: 'Trusted by Radiologists Worldwide',
+    testimonialsSubtitle: 'See what healthcare professionals are saying',
+    ctaTitle: 'Ready to Transform Your Radiology Practice?',
+    ctaSubtitle: 'Join hundreds of radiologists using AI to improve efficiency and patient care',
+    ctaNote: 'No credit card required • 14-day free trial • Cancel anytime',
+    welcomeBack: 'Welcome Back',
+    createAccount: 'Create Account',
+    signInSubtitle: 'Sign in to continue to VitaScribe',
+    createAccountSubtitle: 'Start your free trial today',
+    email: 'Email',
+    password: 'Password',
+    username: 'Username',
+    fullName: 'Full Name',
+    hospital: 'Hospital (Optional)',
+    pleaseWait: 'Please wait...',
+    demoCredentials: 'Demo credentials',
+    noAccount: "Don't have an account?",
+    hasAccount: 'Already have an account?',
+    signUp: 'Sign up',
+    stats: {
+      timeSaved: 'Time Saved',
+      reports: 'Reports Generated',
+      radiologists: 'Radiologists'
+    },
+    featuresList: {
+      aiPowered: {
+        title: 'AI-Powered Generation',
+        desc: 'Advanced Gemini 2.0 AI automatically generates comprehensive reports from clinical indications'
+      },
+      voice: {
+        title: 'Voice Recognition',
+        desc: 'Dictate clinical findings naturally with real-time transcription in multiple languages'
+      },
+      multilang: {
+        title: 'Multi-Language Support',
+        desc: 'Generate reports in French, English, or Arabic with automatic language detection'
+      },
+      templates: {
+        title: 'Template Library',
+        desc: 'Extensive library of specialty-specific templates for CT, MRI, X-Ray, and more'
+      },
+      matching: {
+        title: 'Smart Template Matching',
+        desc: 'AI automatically selects the best template using RAG and similar case analysis'
+      },
+      export: {
+        title: 'Export Options',
+        desc: 'Download reports in Word or PDF format with highlighting and formatting'
+      },
+      validation: {
+        title: 'AI Validation',
+        desc: 'Automatic quality checks and validation to ensure report accuracy and completeness'
+      },
+      secure: {
+        title: 'Secure & Compliant',
+        desc: 'HIPAA-ready with encrypted data storage and role-based access control'
+      }
+    },
+    steps: {
+      step1: {
+        title: 'Input Clinical Indication',
+        desc: "Type or dictate the patient's symptoms, clinical history, and reason for examination"
+      },
+      step2: {
+        title: 'AI Selects Template',
+        desc: 'Our AI analyzes your input and automatically selects the most appropriate report template'
+      },
+      step3: {
+        title: 'Generate & Export',
+        desc: 'Receive a complete, structured report ready for review and export to your PACS or EMR'
+      }
+    }
+  },
+  fr: {
+    appName: 'VitaScribe',
+    tagline: 'Rapports Médicaux par IA',
+    taglineHighlight: 'En Quelques Secondes',
+    heroSubtitle: "Transformez les indications cliniques en rapports radiologiques complets et structurés grâce à l'IA avancée. Gagnez du temps, améliorez la cohérence et optimisez les soins aux patients.",
+    signIn: 'Se Connecter',
+    getStarted: 'Commencer',
+    startFreeTrial: 'Essai Gratuit',
+    watchDemo: 'Voir la Démo',
+    features: 'Fonctionnalités Puissantes pour la Radiologie Moderne',
+    featuresSubtitle: 'Tout ce dont vous avez besoin pour optimiser votre flux de travail radiologique',
+    howItWorks: 'Comment Ça Marche',
+    howItWorksSubtitle: 'Simple, rapide et précis - en 3 étapes seulement',
+    testimonials: 'Approuvé par des Radiologues du Monde Entier',
+    testimonialsSubtitle: 'Découvrez ce que disent les professionnels de santé',
+    ctaTitle: 'Prêt à Transformer Votre Pratique Radiologique?',
+    ctaSubtitle: "Rejoignez des centaines de radiologues qui utilisent l'IA pour améliorer l'efficacité et les soins aux patients",
+    ctaNote: 'Aucune carte bancaire requise • Essai gratuit de 14 jours • Annulation à tout moment',
+    welcomeBack: 'Bienvenue',
+    createAccount: 'Créer un Compte',
+    signInSubtitle: 'Connectez-vous pour continuer sur VitaScribe',
+    createAccountSubtitle: 'Commencez votre essai gratuit aujourd\'hui',
+    email: 'Email',
+    password: 'Mot de passe',
+    username: "Nom d'utilisateur",
+    fullName: 'Nom complet',
+    hospital: 'Hôpital (Optionnel)',
+    pleaseWait: 'Veuillez patienter...',
+    demoCredentials: 'Identifiants de démo',
+    noAccount: "Vous n'avez pas de compte?",
+    hasAccount: 'Vous avez déjà un compte?',
+    signUp: "S'inscrire",
+    stats: {
+      timeSaved: 'Temps Gagné',
+      reports: 'Rapports Générés',
+      radiologists: 'Radiologues'
+    },
+    featuresList: {
+      aiPowered: {
+        title: 'Génération par IA',
+        desc: "L'IA Gemini 2.0 génère automatiquement des rapports complets à partir des indications cliniques"
+      },
+      voice: {
+        title: 'Reconnaissance Vocale',
+        desc: 'Dictez naturellement les observations cliniques avec transcription en temps réel en plusieurs langues'
+      },
+      multilang: {
+        title: 'Support Multilingue',
+        desc: 'Générez des rapports en français, anglais ou arabe avec détection automatique de la langue'
+      },
+      templates: {
+        title: 'Bibliothèque de Modèles',
+        desc: 'Vaste bibliothèque de modèles spécifiques pour TDM, IRM, radiographie et plus encore'
+      },
+      matching: {
+        title: 'Correspondance Intelligente',
+        desc: "L'IA sélectionne automatiquement le meilleur modèle grâce au RAG et à l'analyse de cas similaires"
+      },
+      export: {
+        title: "Options d'Export",
+        desc: 'Téléchargez les rapports en format Word ou PDF avec mise en évidence et formatage'
+      },
+      validation: {
+        title: 'Validation par IA',
+        desc: "Contrôles de qualité automatiques pour garantir l'exactitude et l'exhaustivité des rapports"
+      },
+      secure: {
+        title: 'Sécurisé & Conforme',
+        desc: 'Conforme HIPAA avec stockage crypté et contrôle d\'accès basé sur les rôles'
+      }
+    },
+    steps: {
+      step1: {
+        title: 'Saisir l\'Indication Clinique',
+        desc: 'Tapez ou dictez les symptômes du patient, les antécédents cliniques et la raison de l\'examen'
+      },
+      step2: {
+        title: 'L\'IA Sélectionne le Modèle',
+        desc: 'Notre IA analyse votre saisie et sélectionne automatiquement le modèle de rapport le plus approprié'
+      },
+      step3: {
+        title: 'Générer & Exporter',
+        desc: 'Recevez un rapport complet et structuré prêt pour révision et export vers votre PACS ou DME'
+      }
+    }
+  }
+}
+
 export default function Landing() {
   const navigate = useNavigate()
   const { user, login, register } = useAuth()
+  const [language, setLanguage] = useState<Language>('en')
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
 
@@ -16,6 +194,8 @@ export default function Landing() {
   const [hospitalName, setHospitalName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const t = translations[language]
 
   const handleGetStarted = () => {
     setAuthMode('register')
@@ -71,15 +251,23 @@ export default function Landing() {
       <nav className="nav">
         <div className="nav-container">
           <div className="logo">
-            <span className="logo-icon">📋</span>
-            <span className="logo-text">RadiologyAI</span>
+            <span className="logo-icon">🏥</span>
+            <span className="logo-text">{t.appName}</span>
           </div>
           <div className="nav-actions">
+            <select
+              className="language-selector-nav"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as Language)}
+            >
+              <option value="en">🇬🇧 English</option>
+              <option value="fr">🇫🇷 Français</option>
+            </select>
             <button className="btn-nav" onClick={handleSignIn}>
-              Sign In
+              {t.signIn}
             </button>
             <button className="btn-primary" onClick={handleGetStarted}>
-              Get Started
+              {t.getStarted}
             </button>
           </div>
         </div>
@@ -87,54 +275,64 @@ export default function Landing() {
 
       {/* Hero Section */}
       <section className="hero">
+        <div className="animated-bg">
+          <div className="gradient-orb orb-1"></div>
+          <div className="gradient-orb orb-2"></div>
+          <div className="gradient-orb orb-3"></div>
+        </div>
         <div className="hero-container">
           <div className="hero-content">
-            <h1 className="hero-title">
-              AI-Powered Radiology Reports
-              <span className="hero-gradient"> In Seconds</span>
+            <div className="badge">✨ Powered by Gemini 2.0 AI</div>
+            <h1 className="hero-title animate-fade-in">
+              {t.tagline}
+              <span className="hero-gradient"> {t.taglineHighlight}</span>
             </h1>
-            <p className="hero-subtitle">
-              Transform clinical indications into comprehensive, structured radiology reports using advanced AI.
-              Save time, improve consistency, and enhance patient care.
+            <p className="hero-subtitle animate-fade-in-delay">
+              {t.heroSubtitle}
             </p>
-            <div className="hero-stats">
+            <div className="hero-stats animate-slide-up">
               <div className="stat">
                 <div className="stat-number">90%</div>
-                <div className="stat-label">Time Saved</div>
+                <div className="stat-label">{t.stats.timeSaved}</div>
               </div>
               <div className="stat">
                 <div className="stat-number">10k+</div>
-                <div className="stat-label">Reports Generated</div>
+                <div className="stat-label">{t.stats.reports}</div>
               </div>
               <div className="stat">
                 <div className="stat-number">500+</div>
-                <div className="stat-label">Radiologists</div>
+                <div className="stat-label">{t.stats.radiologists}</div>
               </div>
             </div>
-            <div className="hero-cta">
-              <button className="btn-hero" onClick={handleGetStarted}>
-                Start Free Trial
+            <div className="hero-cta animate-slide-up-delay">
+              <button className="btn-hero pulse" onClick={handleGetStarted}>
+                {t.startFreeTrial}
               </button>
               <button className="btn-hero-secondary" onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}>
-                Watch Demo
+                {t.watchDemo}
               </button>
             </div>
           </div>
-          <div className="hero-visual">
-            <div className="visual-card">
+          <div className="hero-visual animate-slide-left">
+            <div className="visual-card floating">
               <div className="visual-header">
                 <div className="visual-dots">
-                  <span></span><span></span><span></span>
+                  <span className="dot-green"></span><span className="dot-yellow"></span><span className="dot-red"></span>
                 </div>
                 <span className="visual-title">Report Generation</span>
               </div>
               <div className="visual-content">
-                <div className="visual-input">
+                <div className="visual-input typing">
                   <span className="icon">🎤</span>
                   <span>Patient with acute chest pain...</span>
                 </div>
-                <div className="visual-arrow">↓ AI Processing</div>
-                <div className="visual-output">
+                <div className="visual-arrow">
+                  <div className="processing-dots">
+                    <span></span><span></span><span></span>
+                  </div>
+                  ↓ AI Processing
+                </div>
+                <div className="visual-output success-pulse">
                   <span className="icon">✨</span>
                   <span>Complete structured report ready</span>
                 </div>
@@ -147,72 +345,56 @@ export default function Landing() {
       {/* Features Section */}
       <section className="features">
         <div className="section-container">
-          <h2 className="section-title">Powerful Features for Modern Radiology</h2>
-          <p className="section-subtitle">Everything you need to streamline your radiology workflow</p>
+          <h2 className="section-title">{t.features}</h2>
+          <p className="section-subtitle">{t.featuresSubtitle}</p>
 
           <div className="features-grid">
-            <div className="feature-card">
+            <div className="feature-card hover-lift">
               <div className="feature-icon">🤖</div>
-              <h3 className="feature-title">AI-Powered Generation</h3>
-              <p className="feature-description">
-                Advanced Gemini 2.0 AI automatically generates comprehensive reports from clinical indications
-              </p>
+              <h3 className="feature-title">{t.featuresList.aiPowered.title}</h3>
+              <p className="feature-description">{t.featuresList.aiPowered.desc}</p>
             </div>
 
-            <div className="feature-card">
+            <div className="feature-card hover-lift">
               <div className="feature-icon">🎤</div>
-              <h3 className="feature-title">Voice Recognition</h3>
-              <p className="feature-description">
-                Dictate clinical findings naturally with real-time transcription in multiple languages
-              </p>
+              <h3 className="feature-title">{t.featuresList.voice.title}</h3>
+              <p className="feature-description">{t.featuresList.voice.desc}</p>
             </div>
 
-            <div className="feature-card">
+            <div className="feature-card hover-lift">
               <div className="feature-icon">🌍</div>
-              <h3 className="feature-title">Multi-Language Support</h3>
-              <p className="feature-description">
-                Generate reports in French, English, or Arabic with automatic language detection
-              </p>
+              <h3 className="feature-title">{t.featuresList.multilang.title}</h3>
+              <p className="feature-description">{t.featuresList.multilang.desc}</p>
             </div>
 
-            <div className="feature-card">
+            <div className="feature-card hover-lift">
               <div className="feature-icon">📚</div>
-              <h3 className="feature-title">Template Library</h3>
-              <p className="feature-description">
-                Extensive library of specialty-specific templates for CT, MRI, X-Ray, and more
-              </p>
+              <h3 className="feature-title">{t.featuresList.templates.title}</h3>
+              <p className="feature-description">{t.featuresList.templates.desc}</p>
             </div>
 
-            <div className="feature-card">
+            <div className="feature-card hover-lift">
               <div className="feature-icon">🔍</div>
-              <h3 className="feature-title">Smart Template Matching</h3>
-              <p className="feature-description">
-                AI automatically selects the best template using RAG and similar case analysis
-              </p>
+              <h3 className="feature-title">{t.featuresList.matching.title}</h3>
+              <p className="feature-description">{t.featuresList.matching.desc}</p>
             </div>
 
-            <div className="feature-card">
+            <div className="feature-card hover-lift">
               <div className="feature-icon">📄</div>
-              <h3 className="feature-title">Export Options</h3>
-              <p className="feature-description">
-                Download reports in Word or PDF format with highlighting and formatting
-              </p>
+              <h3 className="feature-title">{t.featuresList.export.title}</h3>
+              <p className="feature-description">{t.featuresList.export.desc}</p>
             </div>
 
-            <div className="feature-card">
+            <div className="feature-card hover-lift">
               <div className="feature-icon">✅</div>
-              <h3 className="feature-title">AI Validation</h3>
-              <p className="feature-description">
-                Automatic quality checks and validation to ensure report accuracy and completeness
-              </p>
+              <h3 className="feature-title">{t.featuresList.validation.title}</h3>
+              <p className="feature-description">{t.featuresList.validation.desc}</p>
             </div>
 
-            <div className="feature-card">
+            <div className="feature-card hover-lift">
               <div className="feature-icon">🔐</div>
-              <h3 className="feature-title">Secure & Compliant</h3>
-              <p className="feature-description">
-                HIPAA-ready with encrypted data storage and role-based access control
-              </p>
+              <h3 className="feature-title">{t.featuresList.secure.title}</h3>
+              <p className="feature-description">{t.featuresList.secure.desc}</p>
             </div>
           </div>
         </div>
@@ -221,37 +403,31 @@ export default function Landing() {
       {/* How It Works */}
       <section className="how-it-works" id="demo">
         <div className="section-container">
-          <h2 className="section-title">How It Works</h2>
-          <p className="section-subtitle">Simple, fast, and accurate - in just 3 steps</p>
+          <h2 className="section-title">{t.howItWorks}</h2>
+          <p className="section-subtitle">{t.howItWorksSubtitle}</p>
 
           <div className="steps">
             <div className="step">
-              <div className="step-number">1</div>
+              <div className="step-number glow">1</div>
               <div className="step-content">
-                <h3 className="step-title">Input Clinical Indication</h3>
-                <p className="step-description">
-                  Type or dictate the patient's symptoms, clinical history, and reason for examination
-                </p>
+                <h3 className="step-title">{t.steps.step1.title}</h3>
+                <p className="step-description">{t.steps.step1.desc}</p>
               </div>
             </div>
 
             <div className="step">
-              <div className="step-number">2</div>
+              <div className="step-number glow">2</div>
               <div className="step-content">
-                <h3 className="step-title">AI Selects Template</h3>
-                <p className="step-description">
-                  Our AI analyzes your input and automatically selects the most appropriate report template
-                </p>
+                <h3 className="step-title">{t.steps.step2.title}</h3>
+                <p className="step-description">{t.steps.step2.desc}</p>
               </div>
             </div>
 
             <div className="step">
-              <div className="step-number">3</div>
+              <div className="step-number glow">3</div>
               <div className="step-content">
-                <h3 className="step-title">Generate & Export</h3>
-                <p className="step-description">
-                  Receive a complete, structured report ready for review and export to your PACS or EMR
-                </p>
+                <h3 className="step-title">{t.steps.step3.title}</h3>
+                <p className="step-description">{t.steps.step3.desc}</p>
               </div>
             </div>
           </div>
@@ -261,15 +437,17 @@ export default function Landing() {
       {/* Testimonials */}
       <section className="testimonials">
         <div className="section-container">
-          <h2 className="section-title">Trusted by Radiologists Worldwide</h2>
-          <p className="section-subtitle">See what healthcare professionals are saying</p>
+          <h2 className="section-title">{t.testimonials}</h2>
+          <p className="section-subtitle">{t.testimonialsSubtitle}</p>
 
           <div className="testimonials-grid">
-            <div className="testimonial-card">
+            <div className="testimonial-card hover-lift">
               <div className="testimonial-stars">⭐⭐⭐⭐⭐</div>
               <p className="testimonial-text">
-                "RadiologyAI has transformed my workflow. I can now complete reports 3x faster while maintaining
-                the same level of quality. The voice recognition is incredibly accurate."
+                {language === 'fr'
+                  ? "VitaScribe a transformé mon flux de travail. Je peux maintenant terminer des rapports 3x plus rapidement tout en maintenant le même niveau de qualité. La reconnaissance vocale est incroyablement précise."
+                  : "VitaScribe has transformed my workflow. I can now complete reports 3x faster while maintaining the same level of quality. The voice recognition is incredibly accurate."
+                }
               </p>
               <div className="testimonial-author">
                 <div className="author-avatar">DR</div>
@@ -280,11 +458,13 @@ export default function Landing() {
               </div>
             </div>
 
-            <div className="testimonial-card">
+            <div className="testimonial-card hover-lift">
               <div className="testimonial-stars">⭐⭐⭐⭐⭐</div>
               <p className="testimonial-text">
-                "The multi-language support is a game-changer for our international practice. Our radiologists
-                can now generate reports in French, English, or Arabic seamlessly."
+                {language === 'fr'
+                  ? "Le support multilingue est révolutionnaire pour notre pratique internationale. Nos radiologues peuvent désormais générer des rapports en français, anglais ou arabe de manière transparente."
+                  : "The multi-language support is a game-changer for our international practice. Our radiologists can now generate reports in French, English, or Arabic seamlessly."
+                }
               </p>
               <div className="testimonial-author">
                 <div className="author-avatar">SM</div>
@@ -295,11 +475,13 @@ export default function Landing() {
               </div>
             </div>
 
-            <div className="testimonial-card">
+            <div className="testimonial-card hover-lift">
               <div className="testimonial-stars">⭐⭐⭐⭐⭐</div>
               <p className="testimonial-text">
-                "The AI validation feature catches inconsistencies I might have missed. It's like having a second
-                pair of eyes reviewing every report. Patient safety has improved significantly."
+                {language === 'fr'
+                  ? "La fonction de validation IA détecte les incohérences que j'aurais pu manquer. C'est comme avoir une seconde paire d'yeux qui vérifie chaque rapport. La sécurité des patients s'est considérablement améliorée."
+                  : "The AI validation feature catches inconsistencies I might have missed. It's like having a second pair of eyes reviewing every report. Patient safety has improved significantly."
+                }
               </p>
               <div className="testimonial-author">
                 <div className="author-avatar">JK</div>
@@ -315,20 +497,22 @@ export default function Landing() {
 
       {/* CTA Section */}
       <section className="cta">
+        <div className="animated-bg">
+          <div className="gradient-orb orb-1"></div>
+          <div className="gradient-orb orb-2"></div>
+        </div>
         <div className="cta-container">
-          <h2 className="cta-title">Ready to Transform Your Radiology Practice?</h2>
-          <p className="cta-subtitle">
-            Join hundreds of radiologists using AI to improve efficiency and patient care
-          </p>
+          <h2 className="cta-title">{t.ctaTitle}</h2>
+          <p className="cta-subtitle">{t.ctaSubtitle}</p>
           <div className="cta-buttons">
-            <button className="btn-cta" onClick={handleGetStarted}>
-              Start Free Trial
+            <button className="btn-cta pulse" onClick={handleGetStarted}>
+              {t.startFreeTrial}
             </button>
             <button className="btn-cta-secondary" onClick={handleSignIn}>
-              Sign In
+              {t.signIn}
             </button>
           </div>
-          <p className="cta-note">No credit card required • 14-day free trial • Cancel anytime</p>
+          <p className="cta-note">{t.ctaNote}</p>
         </div>
       </section>
 
@@ -338,11 +522,14 @@ export default function Landing() {
           <div className="footer-content">
             <div className="footer-section">
               <div className="footer-logo">
-                <span className="logo-icon">📋</span>
-                <span className="logo-text">RadiologyAI</span>
+                <span className="logo-icon">🏥</span>
+                <span className="logo-text">{t.appName}</span>
               </div>
               <p className="footer-description">
-                Empowering radiologists with AI-powered report generation
+                {language === 'fr'
+                  ? "Autonomiser les radiologues avec la génération de rapports assistée par IA"
+                  : "Empowering radiologists with AI-powered report generation"
+                }
               </p>
             </div>
             <div className="footer-section">
@@ -371,7 +558,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="footer-bottom">
-            <p>© 2024 RadiologyAI. All rights reserved.</p>
+            <p>© 2024 {t.appName}. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -382,17 +569,15 @@ export default function Landing() {
           <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowAuthModal(false)}>×</button>
             <h2 className="auth-title">
-              {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+              {authMode === 'login' ? t.welcomeBack : t.createAccount}
             </h2>
             <p className="auth-subtitle">
-              {authMode === 'login'
-                ? 'Sign in to continue to RadiologyAI'
-                : 'Start your free trial today'}
+              {authMode === 'login' ? t.signInSubtitle : t.createAccountSubtitle}
             </p>
 
             <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} className="auth-form">
               <div className="form-field">
-                <label className="form-label">Email</label>
+                <label className="form-label">{t.email}</label>
                 <input
                   type="email"
                   value={email}
@@ -406,7 +591,7 @@ export default function Landing() {
               {authMode === 'register' && (
                 <>
                   <div className="form-field">
-                    <label className="form-label">Username</label>
+                    <label className="form-label">{t.username}</label>
                     <input
                       type="text"
                       value={username}
@@ -417,7 +602,7 @@ export default function Landing() {
                     />
                   </div>
                   <div className="form-field">
-                    <label className="form-label">Full Name</label>
+                    <label className="form-label">{t.fullName}</label>
                     <input
                       type="text"
                       value={fullName}
@@ -428,7 +613,7 @@ export default function Landing() {
                     />
                   </div>
                   <div className="form-field">
-                    <label className="form-label">Hospital (Optional)</label>
+                    <label className="form-label">{t.hospital}</label>
                     <input
                       type="text"
                       value={hospitalName}
@@ -441,7 +626,7 @@ export default function Landing() {
               )}
 
               <div className="form-field">
-                <label className="form-label">Password</label>
+                <label className="form-label">{t.password}</label>
                 <input
                   type="password"
                   value={password}
@@ -465,12 +650,12 @@ export default function Landing() {
                 disabled={loading}
                 className="btn-submit"
               >
-                {loading ? 'Please wait...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
+                {loading ? t.pleaseWait : (authMode === 'login' ? t.signIn : t.createAccount)}
               </button>
 
               {authMode === 'login' && (
                 <div className="demo-credentials">
-                  <strong>Demo credentials:</strong><br />
+                  <strong>{t.demoCredentials}:</strong><br />
                   Email: doctor@hospital.com<br />
                   Password: doctor123
                 </div>
@@ -480,13 +665,13 @@ export default function Landing() {
             <div className="auth-switch">
               {authMode === 'login' ? (
                 <p>
-                  Don't have an account?{' '}
-                  <button onClick={() => { setAuthMode('register'); setError('') }}>Sign up</button>
+                  {t.noAccount}{' '}
+                  <button onClick={() => { setAuthMode('register'); setError('') }}>{t.signUp}</button>
                 </p>
               ) : (
                 <p>
-                  Already have an account?{' '}
-                  <button onClick={() => { setAuthMode('login'); setError('') }}>Sign in</button>
+                  {t.hasAccount}{' '}
+                  <button onClick={() => { setAuthMode('login'); setError('') }}>{t.signIn}</button>
                 </p>
               )}
             </div>
@@ -498,17 +683,154 @@ export default function Landing() {
         .landing {
           min-height: 100vh;
           background: #ffffff;
+          overflow-x: hidden;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(40px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideLeft {
+          from { opacity: 0; transform: translateX(60px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); }
+          50% { box-shadow: 0 0 40px rgba(102, 126, 234, 0.8); }
+        }
+
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        @keyframes typing {
+          from { width: 0; }
+          to { width: 100%; }
+        }
+
+        @keyframes processingDots {
+          0%, 20% { opacity: 0.3; }
+          50% { opacity: 1; }
+          100% { opacity: 0.3; }
+        }
+
+        .animate-fade-in {
+          animation: fadeIn 0.8s ease-out;
+        }
+
+        .animate-fade-in-delay {
+          animation: fadeIn 0.8s ease-out 0.2s both;
+        }
+
+        .animate-slide-up {
+          animation: slideUp 0.8s ease-out 0.3s both;
+        }
+
+        .animate-slide-up-delay {
+          animation: slideUp 0.8s ease-out 0.4s both;
+        }
+
+        .animate-slide-left {
+          animation: slideLeft 0.8s ease-out 0.3s both;
+        }
+
+        .pulse {
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        .floating {
+          animation: float 3s ease-in-out infinite;
+        }
+
+        .glow {
+          animation: glow 2s ease-in-out infinite;
+        }
+
+        .hover-lift {
+          transition: all 0.3s ease;
+        }
+
+        .hover-lift:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        /* Animated Background */
+        .animated-bg {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          overflow: hidden;
+          z-index: 0;
+        }
+
+        .gradient-orb {
+          position: absolute;
+          border-radius: 50%;
+          filter: blur(80px);
+          opacity: 0.3;
+          animation: float 8s ease-in-out infinite;
+        }
+
+        .orb-1 {
+          width: 400px;
+          height: 400px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          top: -100px;
+          left: -100px;
+          animation-delay: 0s;
+        }
+
+        .orb-2 {
+          width: 500px;
+          height: 500px;
+          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+          bottom: -150px;
+          right: -150px;
+          animation-delay: 2s;
+        }
+
+        .orb-3 {
+          width: 350px;
+          height: 350px;
+          background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+          top: 50%;
+          left: 50%;
+          animation-delay: 4s;
         }
 
         /* Navigation */
         .nav {
           position: sticky;
           top: 0;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(10px);
+          background: rgba(255, 255, 255, 0.98);
+          backdrop-filter: blur(20px);
           border-bottom: 1px solid #e5e7eb;
           padding: 1rem 0;
           z-index: 100;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
 
         .nav-container {
@@ -526,16 +848,36 @@ export default function Landing() {
           gap: 0.5rem;
           font-size: 1.5rem;
           font-weight: 700;
-          color: #667eea;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
         .logo-icon {
           font-size: 1.75rem;
+          filter: none;
+          -webkit-text-fill-color: initial;
         }
 
         .nav-actions {
           display: flex;
           gap: 1rem;
+          align-items: center;
+        }
+
+        .language-selector-nav {
+          padding: 0.5rem 1rem;
+          border: 2px solid #e2e8f0;
+          border-radius: 8px;
+          background: white;
+          cursor: pointer;
+          font-weight: 600;
+          transition: all 0.2s;
+        }
+
+        .language-selector-nav:hover {
+          border-color: #667eea;
         }
 
         .btn-nav {
@@ -545,7 +887,7 @@ export default function Landing() {
           color: #4b5563;
           font-weight: 600;
           cursor: pointer;
-          border-radius: 6px;
+          border-radius: 8px;
           transition: all 0.2s;
         }
 
@@ -560,29 +902,45 @@ export default function Landing() {
           color: white;
           font-weight: 600;
           cursor: pointer;
-          border-radius: 6px;
-          transition: all 0.2s;
+          border-radius: 8px;
+          transition: all 0.3s;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
 
         .btn-primary:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
 
         /* Hero Section */
         .hero {
+          position: relative;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
           padding: 6rem 2rem;
+          overflow: hidden;
         }
 
         .hero-container {
+          position: relative;
+          z-index: 1;
           max-width: 1200px;
           margin: 0 auto;
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 4rem;
           align-items: center;
+        }
+
+        .badge {
+          display: inline-block;
+          background: rgba(255, 255, 255, 0.2);
+          backdrop-filter: blur(10px);
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          font-size: 0.9rem;
+          margin-bottom: 1.5rem;
+          border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         @media (max-width: 768px) {
@@ -645,13 +1003,14 @@ export default function Landing() {
           font-weight: 700;
           font-size: 1.1rem;
           cursor: pointer;
-          border-radius: 8px;
-          transition: all 0.2s;
+          border-radius: 12px;
+          transition: all 0.3s;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
         }
 
         .btn-hero:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+          transform: translateY(-4px);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
         }
 
         .btn-hero-secondary {
@@ -662,12 +1021,13 @@ export default function Landing() {
           font-weight: 700;
           font-size: 1.1rem;
           cursor: pointer;
-          border-radius: 8px;
-          transition: all 0.2s;
+          border-radius: 12px;
+          transition: all 0.3s;
         }
 
         .btn-hero-secondary:hover {
           background: rgba(255, 255, 255, 0.1);
+          transform: translateY(-2px);
         }
 
         .hero-visual {
@@ -677,9 +1037,9 @@ export default function Landing() {
 
         .visual-card {
           background: white;
-          border-radius: 16px;
+          border-radius: 20px;
           padding: 2rem;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
           max-width: 400px;
           width: 100%;
         }
@@ -702,8 +1062,11 @@ export default function Landing() {
           width: 12px;
           height: 12px;
           border-radius: 50%;
-          background: #d1d5db;
         }
+
+        .dot-green { background: #10b981; }
+        .dot-yellow { background: #f59e0b; }
+        .dot-red { background: #ef4444; }
 
         .visual-title {
           color: #1f2937;
@@ -716,7 +1079,7 @@ export default function Landing() {
 
         .visual-input, .visual-output {
           padding: 1rem;
-          border-radius: 8px;
+          border-radius: 12px;
           display: flex;
           align-items: center;
           gap: 0.75rem;
@@ -725,12 +1088,21 @@ export default function Landing() {
 
         .visual-input {
           background: #f3f4f6;
-          border: 1px solid #d1d5db;
+          border: 2px solid #d1d5db;
+        }
+
+        .typing {
+          overflow: hidden;
+          white-space: nowrap;
         }
 
         .visual-output {
           background: #ecfdf5;
-          border: 1px solid #a7f3d0;
+          border: 2px solid #a7f3d0;
+        }
+
+        .success-pulse {
+          animation: pulse 2s ease-in-out infinite;
         }
 
         .visual-arrow {
@@ -738,6 +1110,28 @@ export default function Landing() {
           padding: 1rem 0;
           color: #667eea;
           font-weight: 600;
+        }
+
+        .processing-dots {
+          display: inline-flex;
+          gap: 0.3rem;
+        }
+
+        .processing-dots span {
+          width: 6px;
+          height: 6px;
+          background: #667eea;
+          border-radius: 50%;
+          display: inline-block;
+          animation: processingDots 1.4s ease-in-out infinite;
+        }
+
+        .processing-dots span:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+
+        .processing-dots span:nth-child(3) {
+          animation-delay: 0.4s;
         }
 
         .icon {
@@ -780,14 +1174,13 @@ export default function Landing() {
         .feature-card {
           background: white;
           padding: 2rem;
-          border-radius: 12px;
+          border-radius: 16px;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-          transition: all 0.3s;
+          border: 2px solid transparent;
         }
 
         .feature-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+          border-color: #667eea;
         }
 
         .feature-icon {
@@ -866,7 +1259,7 @@ export default function Landing() {
         .testimonial-card {
           background: white;
           padding: 2rem;
-          border-radius: 12px;
+          border-radius: 16px;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
 
@@ -912,11 +1305,15 @@ export default function Landing() {
 
         /* CTA */
         .cta {
+          position: relative;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
+          overflow: hidden;
         }
 
         .cta-container {
+          position: relative;
+          z-index: 1;
           max-width: 800px;
           margin: 0 auto;
           padding: 5rem 2rem;
@@ -950,13 +1347,14 @@ export default function Landing() {
           font-weight: 700;
           font-size: 1.1rem;
           cursor: pointer;
-          border-radius: 8px;
-          transition: all 0.2s;
+          border-radius: 12px;
+          transition: all 0.3s;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
         }
 
         .btn-cta:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+          transform: translateY(-4px);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
         }
 
         .btn-cta-secondary {
@@ -967,12 +1365,13 @@ export default function Landing() {
           font-weight: 700;
           font-size: 1.1rem;
           cursor: pointer;
-          border-radius: 8px;
-          transition: all 0.2s;
+          border-radius: 12px;
+          transition: all 0.3s;
         }
 
         .btn-cta-secondary:hover {
           background: rgba(255, 255, 255, 0.1);
+          transform: translateY(-2px);
         }
 
         .cta-note {
@@ -1058,22 +1457,26 @@ export default function Landing() {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(4px);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 1000;
+          animation: fadeIn 0.3s ease-out;
         }
 
         .auth-modal {
           background: white;
-          border-radius: 16px;
+          border-radius: 20px;
           padding: 3rem;
           max-width: 450px;
           width: 90%;
           position: relative;
           max-height: 90vh;
           overflow-y: auto;
+          box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+          animation: slideUp 0.3s ease-out;
         }
 
         .modal-close {
@@ -1085,6 +1488,7 @@ export default function Landing() {
           font-size: 2rem;
           color: #9ca3af;
           cursor: pointer;
+          transition: color 0.2s;
         }
 
         .modal-close:hover {
@@ -1125,7 +1529,7 @@ export default function Landing() {
           width: 100%;
           padding: 0.75rem 1rem;
           border: 2px solid #e5e7eb;
-          border-radius: 8px;
+          border-radius: 10px;
           font-size: 1rem;
           transition: all 0.2s;
         }
@@ -1133,15 +1537,15 @@ export default function Landing() {
         .form-input:focus {
           outline: none;
           border-color: #667eea;
-          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
         }
 
         .auth-error {
           background: #fef2f2;
-          border: 1px solid #fecaca;
+          border: 2px solid #fecaca;
           color: #dc2626;
           padding: 0.75rem 1rem;
-          border-radius: 8px;
+          border-radius: 10px;
           display: flex;
           align-items: center;
           gap: 0.5rem;
@@ -1158,16 +1562,16 @@ export default function Landing() {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
           border: none;
-          border-radius: 8px;
+          border-radius: 10px;
           font-size: 1rem;
           font-weight: 700;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.3s;
         }
 
         .btn-submit:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+          box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
         }
 
         .btn-submit:disabled {
@@ -1177,9 +1581,9 @@ export default function Landing() {
 
         .demo-credentials {
           background: #f0f9ff;
-          border: 1px solid #bae6fd;
+          border: 2px solid #bae6fd;
           padding: 1rem;
-          border-radius: 8px;
+          border-radius: 10px;
           font-size: 0.85rem;
           color: #0c4a6e;
         }
@@ -1197,10 +1601,12 @@ export default function Landing() {
           font-weight: 600;
           cursor: pointer;
           font-size: 1rem;
+          transition: all 0.2s;
         }
 
         .auth-switch button:hover {
           text-decoration: underline;
+          color: #5a67d8;
         }
       `}</style>
     </div>
