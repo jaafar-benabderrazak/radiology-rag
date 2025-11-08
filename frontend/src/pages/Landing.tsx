@@ -4,15 +4,9 @@ import { useAuth } from '../contexts/AuthContext'
 
 export default function Landing() {
   const navigate = useNavigate()
-  const { user, isAuthenticated } = useAuth()
+  const { user } = useAuth()
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
-
-  // If already authenticated, redirect to app
-  if (isAuthenticated && user) {
-    navigate('/app')
-    return null
-  }
 
   const handleGetStarted = () => {
     setAuthMode('register')
