@@ -22,10 +22,15 @@ from cache_service import cache
 from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
 from ai_analysis_service import ai_analysis_service
-from auth import get_current_active_user, get_current_admin_user
+<<<<<<< HEAD
+from auth import get_current_active_user
 from routers import auth_router, users_router, reports_router, templates_router, suggestions_router, notifications_router, backup_router, voice_router, dicom_router
 from critical_findings_detector import critical_detector
 from notification_service import notification_service
+=======
+from auth import get_current_active_user, get_current_admin_user
+from routers import auth_router, users_router
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
 # Configure Gemini
 if not settings.GEMINI_API_KEY:
@@ -47,6 +52,7 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(users_router.router)
 
+<<<<<<< HEAD
 # Include new feature routers
 app.include_router(reports_router.router)
 app.include_router(templates_router.router)
@@ -55,6 +61,17 @@ app.include_router(notifications_router.router)
 app.include_router(backup_router.router)
 app.include_router(voice_router.router)
 app.include_router(dicom_router.router)
+=======
+# Store frontend path for later use (SPA routing will be added at the end)
+FRONTEND_DIST_PATH = Path(__file__).parent.parent / "frontend" / "dist"
+if FRONTEND_DIST_PATH.exists() and FRONTEND_DIST_PATH.is_dir():
+    print(f"✓ Serving frontend from: {FRONTEND_DIST_PATH}")
+    # Mount static assets (JS, CSS, images)
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST_PATH / "assets")), name="assets")
+else:
+    print(f"⚠ Frontend dist directory not found at: {FRONTEND_DIST_PATH}")
+    print("  Run 'cd frontend && npm run build' to build the frontend")
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
 # Create tables on startup
 @app.on_event("startup")
@@ -67,9 +84,81 @@ async def startup_event():
     print("Starting Radiology RAG Backend...")
     print("=" * 60)
 
+<<<<<<< HEAD
     # Create tables if they don't exist
     Base.metadata.create_all(bind=engine, checkfirst=True)
     print("✓ Database tables ready")
+=======
+    # Create tables if they don't exist with retry logic
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            Base.metadata.create_all(bind=engine)
+            print("✓ Database tables ready")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Database connection attempt {attempt + 1} failed: {e}. Retrying in {retry_delay}s...")
+                import time
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                logger.error(f"Failed to connect to database after {max_retries} attempts: {e}")
+                print(f"⚠ Database connection failed. Running in limited mode.")
+                print(f"⚠ Please check your DATABASE_URL configuration.")
+                return
+
+    # Run database migrations
+    try:
+        from migrate_db import migrate_add_language_column
+        from migrate_reports import migrate_add_user_id_to_reports
+        migrate_add_language_column()
+        migrate_add_user_id_to_reports()
+    except Exception as e:
+        logger.warning(f"Migration warning: {e}")
+        print(f"⚠ Migration note: {e}")
+
+    # Load templates from .docx files if database is empty
+    try:
+        from template_loader import load_templates_from_files, DEFAULT_TEMPLATES
+
+        db = next(get_db())
+        template_count = db.query(Template).count()
+
+        if template_count == 0:
+            print("\nLoading templates from files...")
+
+            # Try to load from .docx files
+            templates_data = load_templates_from_files()
+
+            # If no .docx files found, use default templates
+            if not templates_data:
+                print("⚠ No template files found, using default templates")
+                templates_data = DEFAULT_TEMPLATES
+
+            # Insert templates into database
+            for tpl_data in templates_data:
+                template = Template(**tpl_data)
+                db.add(template)
+
+            db.commit()
+            print(f"✓ Loaded {len(templates_data)} templates successfully")
+
+            # Print loaded templates
+            for tpl in templates_data:
+                print(f"  - {tpl['title']} ({tpl['category']})")
+        else:
+            print(f"✓ Found {template_count} existing templates in database")
+
+        db.close()
+    except Exception as e:
+        logger.error(f"Error loading templates: {e}")
+        print(f"⚠ Failed to load templates: {e}")
+        import traceback
+        traceback.print_exc()
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
     # Initialize services (already done in their constructors)
     print("✓ Cache service initialized")
@@ -191,8 +280,13 @@ def format_skeleton(skeleton: str, meta: Meta, indication: str) -> str:
     )
 
 # ---------- API Endpoints ----------
+<<<<<<< HEAD
 # Note: Root endpoint "/" is defined at the bottom of this file
 # to serve the frontend after static files are mounted
+=======
+# Note: Root path "/" is handled by SPA catch-all at end of file
+# Use /health for API health checks
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
 @app.get("/templates", response_model=List[TemplateResponse])
 async def list_templates(db: Session = Depends(get_db)):
@@ -541,7 +635,11 @@ Now generate the COMPLETE report with all placeholders filled IN {template_lang.
     try:
         report = Report(
             template_id=template.id,
+<<<<<<< HEAD
             user_id=current_user.id,  # Track who created it
+=======
+            user_id=current_user.id,  # Track which user generated this report
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
             patient_name=meta.patient_name,
             accession=meta.accession,
             doctor_name=meta.doctorName,
@@ -550,9 +648,13 @@ Now generate the COMPLETE report with all placeholders filled IN {template_lang.
             indication=req.input,
             generated_report=report_text,
             study_datetime=meta.study_datetime,
+<<<<<<< HEAD
             modality=modality,  # Add modality for filtering
             similar_cases_used=similar_cases,  # Store RAG context
             highlights=list(set(highlights))  # Store highlights
+=======
+            report_language=template_lang  # Save the report language from template
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
         )
         db.add(report)
         db.commit()
@@ -947,6 +1049,7 @@ async def health_check():
         "gemini_model": settings.GEMINI_MODEL
     }
 
+<<<<<<< HEAD
 # Serve static frontend files (for production deployment)
 # Get the project root directory (parent of backend directory)
 backend_dir = Path(__file__).resolve().parent
@@ -1004,3 +1107,29 @@ else:
             "health": "/health",
             "note": "Frontend not built. Deploy will build it automatically."
         }
+=======
+# ============================================================
+# SPA Frontend Routing - MUST BE LAST!
+# Catch-all route to serve frontend for all unmatched paths
+# ============================================================
+if FRONTEND_DIST_PATH.exists() and FRONTEND_DIST_PATH.is_dir():
+    index_path = FRONTEND_DIST_PATH / "index.html"
+
+    @app.get("/")
+    async def serve_root():
+        """Serve frontend SPA for root path"""
+        if index_path.exists():
+            return FileResponse(index_path)
+        raise HTTPException(status_code=404, detail="Frontend not found")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """
+        Serve frontend SPA for all unmatched routes.
+        This must be defined LAST so API routes are matched first.
+        """
+        # Serve index.html for SPA routing
+        if index_path.exists():
+            return FileResponse(index_path)
+        raise HTTPException(status_code=404, detail="Frontend not found")
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp

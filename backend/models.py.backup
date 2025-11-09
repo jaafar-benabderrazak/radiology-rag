@@ -51,8 +51,13 @@ class Report(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     template_id = Column(Integer, ForeignKey("templates.id"), nullable=False)
+<<<<<<< HEAD
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Track who created it
     patient_name = Column(String(200), nullable=True, index=True)  # Added index for search
+=======
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # User who generated the report
+    patient_name = Column(String(200), nullable=True)
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
     accession = Column(String(100), nullable=True, index=True)
     doctor_name = Column(String(200), nullable=True)
     hospital_name = Column(String(200), nullable=True)
@@ -112,11 +117,16 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+<<<<<<< HEAD
     # Relationships
     reports = relationship("Report", back_populates="user")
     created_templates = relationship("Template", foreign_keys="Template.created_by_user_id", back_populates="created_by")
     sent_notifications = relationship("CriticalNotification", foreign_keys="CriticalNotification.sent_by_user_id", back_populates="sent_by")
     received_notifications = relationship("CriticalNotification", foreign_keys="CriticalNotification.recipient_user_id", back_populates="recipient")
+=======
+    # Relationship to reports
+    reports = relationship("Report", back_populates="user")
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"
