@@ -10,7 +10,7 @@ channel = "stable-23_11"
 
 [deployment]
 run = ["bash", "start-replit.sh"]
-build = ["bash", "-c", "python3 -m pip install --no-cache-dir -r backend/requirements.txt && cd frontend && npm ci && npm run build"]
+build = ["sh", "-c", "bash -c python3 -m pip install --no-cache-dir -r backend/requirements-deploy.txt && cd frontend && npm ci && npm run build"]
 deploymentTarget = "cloudrun"
 
 [env]
