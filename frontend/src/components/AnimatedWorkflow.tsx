@@ -47,8 +47,8 @@ export default function AnimatedWorkflow({ language }: AnimatedWorkflowProps) {
           icon: '🤖',
           details: [
             'Template matching',
-            'RAG-based context',
-            'Similar case analysis',
+            'Context analysis',
+            'Anatomical recognition',
             'Medical terminology'
           ],
           color: 'purple',
@@ -110,8 +110,8 @@ export default function AnimatedWorkflow({ language }: AnimatedWorkflowProps) {
           icon: '🤖',
           details: [
             'Correspondance de modèle',
-            'Contexte basé sur RAG',
-            'Analyse de cas similaires',
+            'Analyse de contexte',
+            'Reconnaissance anatomique',
             'Terminologie médicale'
           ],
           color: 'purple',

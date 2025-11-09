@@ -6,6 +6,7 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  uploadTemplateFile,
   type TemplateDetail,
   type TemplateCreateRequest,
   type TemplateUpdateRequest
@@ -34,7 +35,8 @@ export default function Admin() {
     skeleton: '',
     category: '',
     language: 'fr',
-    is_active: true
+    is_active: true,
+    is_shared: false
   })
 
   // Check if user is admin
@@ -73,7 +75,8 @@ export default function Admin() {
       skeleton: '',
       category: '',
       language: 'fr',
-      is_active: true
+      is_active: true,
+      is_shared: false
     })
     setShowModal(true)
   }
@@ -87,7 +90,8 @@ export default function Admin() {
       skeleton: template.skeleton,
       category: template.category || '',
       language: template.language || 'fr',
-      is_active: template.is_active
+      is_active: template.is_active,
+      is_shared: template.is_shared
     })
     setShowModal(true)
   }
@@ -105,7 +109,8 @@ export default function Admin() {
           skeleton: formData.skeleton,
           category: formData.category || null,
           language: formData.language,
-          is_active: formData.is_active
+          is_active: formData.is_active,
+          is_shared: formData.is_shared
         }
         await updateTemplate(editingTemplate.template_id, updateData)
       } else {
@@ -133,6 +138,43 @@ export default function Admin() {
       await loadTemplates()
     } catch (err: any) {
       setError(err.message || 'Failed to delete template')
+    }
+  }
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith('.docx')) {
+      setError('Please upload a Word document (.docx)')
+      return
+    }
+
+    try {
+      setError(null)
+      setSaving(true)
+
+      const extractedData = await uploadTemplateFile(file)
+
+      // Pre-fill the form with extracted data and open modal
+      setEditingTemplate(null)
+      setFormData({
+        template_id: extractedData.template_id,
+        title: extractedData.title,
+        keywords: extractedData.keywords,
+        skeleton: extractedData.skeleton,
+        category: extractedData.category || '',
+        language: extractedData.language || 'fr',
+        is_active: true,
+        is_shared: false
+      })
+      setShowModal(true)
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload template file')
+    } finally {
+      setSaving(false)
+      // Reset file input
+      event.target.value = ''
     }
   }
 
@@ -201,6 +243,18 @@ export default function Admin() {
           <button className="btn btn-primary" onClick={handleCreate}>
             + New Template
           </button>
+
+          <label className="btn btn-secondary btn-upload" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>📄</span>
+            Upload Word File
+            <input
+              type="file"
+              accept=".docx"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+              disabled={saving}
+            />
+          </label>
         </div>
 
         <div className="templates-grid">
@@ -209,6 +263,14 @@ export default function Admin() {
               <div className="template-card-header">
                 <h3 className="template-card-title">{template.title}</h3>
                 <div className="template-card-badges">
+                  {template.is_system_template ? (
+                    <span className="badge badge-system">SYSTEM</span>
+                  ) : (
+                    <span className="badge badge-user">USER</span>
+                  )}
+                  {template.is_shared && (
+                    <span className="badge badge-shared">SHARED</span>
+                  )}
                   {template.category && (
                     <span className="badge badge-category">{template.category}</span>
                   )}
@@ -371,6 +433,20 @@ export default function Admin() {
                   Active
                 </label>
               </div>
+
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_shared}
+                    onChange={(e) => setFormData({...formData, is_shared: e.target.checked})}
+                  />
+                  Share with all users
+                </label>
+                <p className="help-text">
+                  When shared, this template will be available to all users in the system
+                </p>
+              </div>
             </div>
 
             <div className="modal-footer">
@@ -521,6 +597,21 @@ export default function Admin() {
           border-radius: 4px;
           font-size: 0.75rem;
           font-weight: 600;
+        }
+
+        .badge-system {
+          background: #e9d8fd;
+          color: #553c9a;
+        }
+
+        .badge-user {
+          background: #fef5e7;
+          color: #975a16;
+        }
+
+        .badge-shared {
+          background: #b2dfdb;
+          color: #00695c;
         }
 
         .badge-category {

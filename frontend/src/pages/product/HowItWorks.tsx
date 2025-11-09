@@ -15,7 +15,7 @@ export default function HowItWorks() {
     {
       number: '02',
       title: 'AI Selects Template',
-      description: 'Our advanced AI analyzes your input and automatically selects the most appropriate report template using RAG and similar case analysis.',
+      description: 'Our advanced AI analyzes your input and automatically selects the most appropriate report template based on clinical context and anatomical keywords.',
       features: ['Smart matching', 'Context analysis', 'Template suggestions', 'Manual override'],
       image: '🤖'
     },

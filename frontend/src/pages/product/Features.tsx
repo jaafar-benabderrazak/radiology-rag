@@ -66,11 +66,11 @@ export default function Features() {
       title: 'Smart Template Matching',
       category: 'AI Intelligence',
       gradient: 'from-indigo-500 to-purple-500',
-      description: 'AI automatically selects the best template using RAG and similar case analysis',
+      description: 'AI automatically selects the best template based on clinical indication and context',
       benefits: [
         'Context-aware selection',
-        'Case similarity analysis',
-        'Learning from patterns',
+        'Intelligent pattern recognition',
+        'Anatomical understanding',
         'Continuous improvement'
       ]
     },

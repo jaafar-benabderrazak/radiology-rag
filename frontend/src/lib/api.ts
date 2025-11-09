@@ -97,6 +97,9 @@ export interface TemplateDetail {
   category: string | null
   language: string | null
   is_active: boolean
+  created_by_user_id: number | null
+  is_system_template: boolean
+  is_shared: boolean
   created_at: string
   updated_at: string | null
 }
@@ -109,6 +112,7 @@ export interface TemplateCreateRequest {
   category?: string | null
   language?: string
   is_active?: boolean
+  is_shared?: boolean
 }
 
 export interface TemplateUpdateRequest {
@@ -118,6 +122,7 @@ export interface TemplateUpdateRequest {
   category?: string | null
   language?: string
   is_active?: boolean
+  is_shared?: boolean
 }
 
 export interface ReportHistory {
@@ -166,7 +171,9 @@ export interface GenerateResponse {
 }
 
 export async function fetchTemplates(): Promise<Template[]> {
-  const res = await fetch(`${base}/templates`)
+  const res = await fetch(`${base}/templates`, {
+    headers: getAuthHeaders()
+  })
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }
@@ -427,6 +434,72 @@ export async function fetchReportHistory(limit: number = 50, skip: number = 0): 
   return res.json()
 }
 
+// ========================================
+// Admin Template Management Functions
+// ========================================
+
+export async function fetchAllTemplates(): Promise<TemplateDetail[]> {
+  const res = await fetch(`${base}/admin/templates`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function createTemplate(data: TemplateCreateRequest): Promise<TemplateDetail> {
+  const res = await fetch(`${base}/admin/templates`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function updateTemplate(templateId: string, data: TemplateUpdateRequest): Promise<TemplateDetail> {
+  const res = await fetch(`${base}/admin/templates/${templateId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function deleteTemplate(templateId: string): Promise<void> {
+  const res = await fetch(`${base}/admin/templates/${templateId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+}
+
+export async function uploadTemplateFile(file: File): Promise<{ template_id: string, title: string, skeleton: string, keywords: string[] }> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const res = await fetch(`${base}/admin/templates/upload`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`
+    },
+    body: formData
+  })
+
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
 export async function fetchReports(params: URLSearchParams): Promise<ReportSummary[]> {
   const url = `${base}/api/reports?${params.toString()}`
   const res = await fetch(url, { headers: getAuthHeaders() })
@@ -498,58 +571,6 @@ export interface TemplateUpdate {
   category?: string
   is_shared?: boolean
   is_active?: boolean
-}
-
-export async function fetchAllTemplates(includeInactive: boolean = false): Promise<TemplateResponse[]> {
-  const url = `${base}/api/templates?include_inactive=${includeInactive}`
-  const res = await fetch(url, { headers: getAuthHeaders() })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-export async function fetchMyTemplates(): Promise<TemplateResponse[]> {
-  const url = `${base}/api/templates/my`
-  const res = await fetch(url, { headers: getAuthHeaders() })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-export async function createTemplate(data: TemplateCreate): Promise<TemplateResponse> {
-  const url = `${base}/api/templates`
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data)
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-export async function getTemplateById(id: number): Promise<TemplateResponse> {
-  const url = `${base}/api/templates/${id}`
-  const res = await fetch(url, { headers: getAuthHeaders() })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-export async function updateTemplate(id: number, data: TemplateUpdate): Promise<TemplateResponse> {
-  const url = `${base}/api/templates/${id}`
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data)
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-export async function deleteTemplate(id: number): Promise<void> {
-  const url = `${base}/api/templates/${id}`
-  const res = await fetch(url, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  })
-  if (!res.ok) throw new Error(await res.text())
 }
 
 // ===========================

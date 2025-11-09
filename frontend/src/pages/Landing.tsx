@@ -62,7 +62,7 @@ const translations = {
       },
       matching: {
         title: 'Smart Template Matching',
-        desc: 'AI automatically selects the best template using RAG and similar case analysis'
+        desc: 'AI automatically selects the best template based on clinical indication'
       },
       export: {
         title: 'Export Options',
@@ -148,7 +148,7 @@ const translations = {
       },
       matching: {
         title: 'Correspondance Intelligente',
-        desc: "L'IA sélectionne automatiquement le meilleur modèle grâce au RAG et à l'analyse de cas similaires"
+        desc: "L'IA sélectionne automatiquement le meilleur modèle basé sur l'indication clinique"
       },
       export: {
         title: "Options d'Export",
