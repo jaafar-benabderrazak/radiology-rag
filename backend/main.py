@@ -61,15 +61,78 @@ app.include_router(dicom_router.router)
 async def startup_event():
     """Initialize database and services on startup"""
     import logging
+    from template_loader import load_templates_from_files
+    from auth import get_password_hash
+    from sqlalchemy.orm import Session
+
     logger = logging.getLogger(__name__)
-    
+
     print("=" * 60)
     print("Starting Radiology RAG Backend...")
     print("=" * 60)
 
-    # Create tables if they don't exist
-    Base.metadata.create_all(bind=engine, checkfirst=True)
-    print("✓ Database tables ready")
+    # Force recreate database tables to ensure schema is up-to-date
+    # This is safe for ephemeral deployments (Replit, Cloud Run)
+    try:
+        print("Recreating database tables...")
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+        print("✓ Database tables created with latest schema")
+
+        # Load templates after creating tables
+        from database import SessionLocal
+        db = SessionLocal()
+        try:
+            print("Loading templates from .docx files...")
+            templates_data = load_templates_from_files()
+
+            if templates_data:
+                for tpl_data in templates_data:
+                    template = Template(**tpl_data)
+                    db.add(template)
+                db.commit()
+                print(f"✓ Loaded {len(templates_data)} templates")
+            else:
+                print("⚠ No template files found (will use empty database)")
+
+            # Create default admin user
+            admin_user = User(
+                email="admin@radiology.com",
+                username="admin",
+                full_name="System Administrator",
+                hashed_password=get_password_hash("admin123"),
+                role="admin",
+                is_active=True,
+                is_verified=True
+            )
+            db.add(admin_user)
+
+            # Create default doctor user
+            doctor_user = User(
+                email="doctor@hospital.com",
+                username="doctor1",
+                full_name="Dr. John Smith",
+                hashed_password=get_password_hash("doctor123"),
+                role="doctor",
+                hospital_name="General Hospital",
+                is_active=True,
+                is_verified=True
+            )
+            db.add(doctor_user)
+            db.commit()
+            print("✓ Default users created (admin/admin123, doctor/doctor123)")
+
+        except Exception as e:
+            print(f"⚠ Template/user loading warning: {e}")
+            db.rollback()
+        finally:
+            db.close()
+
+    except Exception as e:
+        print(f"⚠ Database initialization warning: {e}")
+        # Try to create tables even if drop fails (for first run)
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+        print("✓ Database tables ready")
 
     # Initialize services (already done in their constructors)
     print("✓ Cache service initialized")
@@ -167,12 +230,203 @@ SYSTEM_INSTRUCTIONS = (
 )
 
 def choose_template_auto(text: str, db: Session) -> Optional[Template]:
-    """Auto-select template based on keywords"""
+    """
+    Auto-select template using Gemini AI for intelligent classification
+
+    Uses Gemini to understand the clinical context and select the most
+    appropriate template. Falls back to keyword matching if Gemini fails.
+    """
     templates = db.query(Template).filter(Template.is_active == True).all()
     if not templates:
         return None
 
+    # Try Gemini-based classification first
+    try:
+        selected_template = _choose_template_with_gemini(text, templates)
+        if selected_template:
+            return selected_template
+        print("⚠ Gemini template selection returned no result, using fallback")
+    except Exception as e:
+        print(f"⚠ Gemini template selection failed ({e}), using fallback")
+
+    # Fallback to weighted keyword matching
+    return _choose_template_with_keywords(text, templates)
+
+
+def _choose_template_with_gemini(text: str, templates: List[Template]) -> Optional[Template]:
+    """Use Gemini AI to intelligently select the most appropriate template"""
+
+    # Build template list for Gemini
+    template_descriptions = []
+    for i, t in enumerate(templates, 1):
+        keywords_str = ", ".join(t.keywords[:8])  # First 8 keywords
+        template_descriptions.append(
+            f"{i}. {t.title} (ID: {t.template_id})\n"
+            f"   Keywords: {keywords_str}\n"
+            f"   Category: {t.category or 'General'}"
+        )
+
+    templates_list = "\n\n".join(template_descriptions)
+
+    # Create classification prompt
+    classification_prompt = f"""You are a radiology AI assistant. Based on the clinical indication below, select the MOST APPROPRIATE radiology report template.
+
+CLINICAL INDICATION:
+{text}
+
+AVAILABLE TEMPLATES:
+{templates_list}
+
+INSTRUCTIONS:
+1. Analyze the clinical indication carefully
+2. Identify the anatomical region, imaging modality, and clinical context
+3. Select the single most appropriate template from the list above
+4. Respond with ONLY the template ID (e.g., "irm_biliaire" or "entero")
+
+Your response (template ID only):"""
+
+    try:
+        # Call Gemini with temperature=0 for deterministic results
+        model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            generation_config={
+                "temperature": 0,
+                "top_p": 1,
+                "top_k": 1,
+                "max_output_tokens": 50,
+            }
+        )
+
+        print(f"🤖 Using Gemini AI to classify template for: {text[:80]}...")
+        response = model.generate_content(classification_prompt)
+
+        # Extract template_id from response
+        selected_id = response.text.strip().lower()
+
+        # Remove any extra text, just keep the ID
+        selected_id = selected_id.split()[0]  # Take first word
+        selected_id = selected_id.replace('"', '').replace("'", '')  # Remove quotes
+
+        # Find matching template
+        for template in templates:
+            if template.template_id.lower() == selected_id:
+                print(f"✓ Gemini selected: {template.title} (ID: {template.template_id})")
+                return template
+            # Also try partial match (in case Gemini returns abbreviated ID)
+            if selected_id in template.template_id.lower() or template.template_id.lower() in selected_id:
+                print(f"✓ Gemini selected (partial match): {template.title} (ID: {template.template_id})")
+                return template
+
+        print(f"⚠ Gemini returned unknown template ID: {selected_id}")
+        return None
+
+    except Exception as e:
+        print(f"⚠ Gemini classification error: {e}")
+        return None
+
+
+def _choose_template_with_keywords(text: str, templates: List[Template]) -> Optional[Template]:
+    """
+    Fallback method: Auto-select template based on weighted keyword matching
+
+    Uses weighted keyword matching to prioritize:
+    - Anatomical terms (highest priority)
+    - Specific medical terms (high priority)
+    - Generic terms (lower priority)
+    """
     low = text.lower()
+
+    # Anatomical keywords that should have highest priority
+    anatomical_keywords = {
+        # Liver/biliary
+        'segment', 'segmentaire', 'foie', 'hépatique', 'hepatique', 'biliaire', 'bile',
+        'vésicule', 'vesicule', 'cholédoque', 'choledoque', 'voies biliaires',
+        # Intestines
+        'intestin', 'grêle', 'grele', 'iléon', 'ileon', 'jéjunum', 'jejunum', 'duodénum', 'duodenum',
+        'côlon', 'colon', 'rectum', 'sigmoïde', 'sigmoide', 'caecum', 'cecum',
+        # Spine
+        'vertèbre', 'vertebre', 'rachis', 'cervical', 'thoracique', 'lombaire', 'sacré', 'sacre',
+        'disque', 'disc', 'l1', 'l2', 'l3', 'l4', 'l5', 's1', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7',
+        # Joints
+        'genou', 'cheville', 'épaule', 'epaule', 'coude', 'poignet', 'hanche',
+        # Brain
+        'cérébr', 'cerebr', 'encéph', 'enceph', 'cerveau',
+        # Chest
+        'pulmonaire', 'poumon', 'thorax', 'médiastin', 'mediastin',
+        # Breast
+        'sein', 'mammaire', 'breast',
+        # Other
+        'rein', 'rénal', 'renal', 'pancréa', 'pancrea', 'rate', 'splén', 'splen'
+    }
+
+    # Specific medical terms (medium-high priority)
+    specific_keywords = {
+        'lésion', 'lesion', 'masse', 'tumeur', 'kyste', 'nodule',
+        'sténose', 'stenose', 'dilatation', 'compression', 'hernie',
+        'fracture', 'luxation', 'rupture', 'déchirure', 'dechirure',
+        'hypodense', 'hyperdense', 'rehaussement', 'enhancement',
+        'ischémie', 'ischemie', 'infarctus', 'hémorragie', 'hemorragie'
+    }
+
+    def score_template(template: Template) -> float:
+        """Calculate weighted score for template match"""
+        score = 0.0
+        matched_anatomical = 0
+        matched_specific = 0
+        matched_generic = 0
+
+        for keyword in template.keywords:
+            kw_lower = keyword.lower()
+
+            if kw_lower not in low:
+                continue
+
+            # Check if keyword is anatomical (highest weight)
+            is_anatomical = any(anat in kw_lower for anat in anatomical_keywords)
+            if is_anatomical:
+                # Anatomical keywords get weight of 10
+                score += 10.0
+                matched_anatomical += 1
+                continue
+
+            # Check if keyword is specific medical term (high weight)
+            is_specific = any(spec in kw_lower for spec in specific_keywords)
+            if is_specific:
+                # Specific medical terms get weight of 3
+                score += 3.0
+                matched_specific += 1
+                continue
+
+            # Generic keyword (baseline weight)
+            score += 1.0
+            matched_generic += 1
+
+        # Bonus for title match (indicates template is very relevant)
+        if template.title.lower() in low or any(word in low for word in template.title.lower().split()):
+            score += 5.0
+
+        # Debug logging
+        if matched_anatomical > 0 or matched_specific > 0:
+            print(f"  {template.title}: score={score:.1f} (anat={matched_anatomical}, spec={matched_specific}, gen={matched_generic})")
+
+        return score
+
+    # Score all templates
+    print(f"Auto-selecting template for: {text[:100]}...")
+    scored_templates = [(t, score_template(t)) for t in templates]
+
+    # Sort by score (highest first)
+    scored_templates.sort(key=lambda x: x[1], reverse=True)
+
+    # Return template with highest score, or None if no matches
+    if scored_templates and scored_templates[0][1] > 0:
+        best_template = scored_templates[0][0]
+        best_score = scored_templates[0][1]
+        print(f"✓ Selected: {best_template.title} (score: {best_score:.1f})")
+        return best_template
+
+    # Fallback: use simple keyword count
+    print("⚠ No good match found, using simple keyword count")
     best = max(templates, key=lambda t: sum(1 for k in t.keywords if k.lower() in low))
     return best
 
@@ -746,7 +1000,18 @@ async def download_report_pdf(
 
     Args:
         report_id: The report ID
+
+    Note: PDF generation requires LibreOffice, which is not available in lightweight deployments.
+          For lightweight deployments, download the Word document instead.
     """
+    # Check if LibreOffice is available
+    import shutil
+    if not shutil.which('soffice'):
+        raise HTTPException(
+            status_code=501,
+            detail="PDF export is not available in this deployment. LibreOffice is not installed to reduce deployment size. Please download the Word document (.docx) instead, which can be opened in Microsoft Word, Google Docs, or LibreOffice."
+        )
+
     # Get report from database (ensure user owns it)
     report = db.query(Report).filter(
         Report.id == report_id,
