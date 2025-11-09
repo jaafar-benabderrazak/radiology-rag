@@ -9,6 +9,18 @@ class UserRole(str, enum.Enum):
     DOCTOR = "doctor"
     RADIOLOGIST = "radiologist"
 
+class MedicalField(str, enum.Enum):
+    RADIOLOGY = "radiology"
+    CARDIOLOGY = "cardiology"
+    NEUROLOGY = "neurology"
+    ORTHOPEDICS = "orthopedics"
+    GASTROENTEROLOGY = "gastroenterology"
+    PULMONOLOGY = "pulmonology"
+    ONCOLOGY = "oncology"
+    PATHOLOGY = "pathology"
+    DERMATOLOGY = "dermatology"
+    OTHER = "other"
+
 class Template(Base):
     __tablename__ = "templates"
 
@@ -18,6 +30,7 @@ class Template(Base):
     keywords = Column(JSON, nullable=False)  # Store as JSON array
     skeleton = Column(Text, nullable=False)
     category = Column(String(100), nullable=True)
+    medical_field = Column(SQLEnum(MedicalField), default=MedicalField.RADIOLOGY, nullable=False, index=True)
     language = Column(String(10), nullable=True, default='fr')  # Template language: 'fr', 'en', etc.
     is_active = Column(Boolean, default=True)
     formatting_metadata = Column(Text, nullable=True)  # JSON string with formatting info

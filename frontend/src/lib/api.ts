@@ -86,6 +86,7 @@ export interface Template {
   title: string
   keywords: string[]
   category: string | null
+  medical_field: string
 }
 
 export interface TemplateDetail {
@@ -95,6 +96,7 @@ export interface TemplateDetail {
   keywords: string[]
   skeleton: string
   category: string | null
+  medical_field: string
   language: string | null
   is_active: boolean
   created_at: string
@@ -107,6 +109,7 @@ export interface TemplateCreateRequest {
   keywords: string[]
   skeleton: string
   category?: string | null
+  medical_field?: string
   language?: string
   is_active?: boolean
 }
@@ -116,6 +119,7 @@ export interface TemplateUpdateRequest {
   keywords?: string[]
   skeleton?: string
   category?: string | null
+  medical_field?: string
   language?: string
   is_active?: boolean
 }
@@ -165,8 +169,23 @@ export interface GenerateResponse {
   report_id: number | null
 }
 
-export async function fetchTemplates(): Promise<Template[]> {
-  const res = await fetch(`${base}/templates`)
+export interface MedicalField {
+  value: string
+  label: string
+}
+
+export async function fetchMedicalFields(): Promise<MedicalField[]> {
+  const res = await fetch(`${base}/medical-fields`)
+  if (!res.ok) throw new Error(await res.text())
+  const data = await res.json()
+  return data.fields
+}
+
+export async function fetchTemplates(medicalField?: string): Promise<Template[]> {
+  const url = medicalField
+    ? `${base}/templates?medical_field=${encodeURIComponent(medicalField)}`
+    : `${base}/templates`
+  const res = await fetch(url)
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }

@@ -3,12 +3,14 @@ import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import {
   fetchTemplates,
+  fetchMedicalFields,
   generate,
   downloadReportWord,
   downloadReportPDF,
   generateSummary,
   validateReport,
   type Template,
+  type MedicalField,
   type GenerateResponse,
   type SummaryResult,
   type ValidationResult
@@ -20,8 +22,10 @@ type Language = 'en' | 'fr'
 // UI translations
 const translations = {
   en: {
-    title: "Radiology Report Generator",
+    title: "Medical Report Generator",
     subtitle: "AI-Powered Medical Report Generation with RAG",
+    medicalField: "Medical Field",
+    selectField: "Select Medical Field",
     clinicalInfo: "Clinical Information",
     reportTemplate: "Report Template",
     autoDetect: "Auto-detect (with RAG)",
@@ -75,8 +79,10 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
     highlightsLegend: "Key findings and important phrases are highlighted"
   },
   fr: {
-    title: "Générateur de Rapports Radiologiques",
+    title: "Générateur de Rapports Médicaux",
     subtitle: "Génération de Rapports Médicaux Alimentée par IA avec RAG",
+    medicalField: "Domaine Médical",
+    selectField: "Sélectionner le Domaine Médical",
     clinicalInfo: "Informations Cliniques",
     reportTemplate: "Modèle de Rapport",
     autoDetect: "Détection automatique (avec RAG)",
@@ -143,6 +149,8 @@ export default function ReportGenerator() {
 
   const t = translations[language]
 
+  const [medicalFields, setMedicalFields] = useState<MedicalField[]>([])
+  const [selectedMedicalField, setSelectedMedicalField] = useState<string>("radiology")
   const [templates, setTemplates] = useState<Template[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<string>("auto")
   const [inputText, setInputText] = useState("")
@@ -177,12 +185,21 @@ export default function ReportGenerator() {
     localStorage.setItem('radiology-app-language', language)
   }, [language])
 
-  // Load templates on mount
+  // Load medical fields on mount
   useEffect(() => {
-    fetchTemplates()
-      .then(setTemplates)
-      .catch(err => console.error("Failed to load templates:", err))
+    fetchMedicalFields()
+      .then(setMedicalFields)
+      .catch(err => console.error("Failed to load medical fields:", err))
   }, [])
+
+  // Load templates when medical field changes
+  useEffect(() => {
+    if (selectedMedicalField) {
+      fetchTemplates(selectedMedicalField)
+        .then(setTemplates)
+        .catch(err => console.error("Failed to load templates:", err))
+    }
+  }, [selectedMedicalField])
 
   // Initialize speech recognition on mount
   useEffect(() => {
@@ -592,6 +609,28 @@ export default function ReportGenerator() {
           {/* Input Section */}
           <div className="card">
             <h2 className="card-title">{t.clinicalInfo}</h2>
+
+            <div className="form-group">
+              <label htmlFor="medicalField" className="label">
+                {t.medicalField}
+              </label>
+              <select
+                id="medicalField"
+                className="select"
+                value={selectedMedicalField}
+                onChange={(e) => {
+                  setSelectedMedicalField(e.target.value)
+                  setSelectedTemplate("auto") // Reset template selection when field changes
+                }}
+              >
+                <option value="">{t.selectField}</option>
+                {medicalFields.map((field) => (
+                  <option key={field.value} value={field.value}>
+                    {field.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="form-group">
               <label htmlFor="template" className="label">

@@ -16,7 +16,7 @@ import google.generativeai as genai
 # Local imports
 from config import settings
 from database import get_db, Base, engine
-from models import Template, Report, User
+from models import Template, Report, User, MedicalField
 from cache_service import cache
 from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
@@ -173,6 +173,7 @@ class TemplateResponse(BaseModel):
     title: str
     keywords: List[str]
     category: Optional[str]
+    medical_field: str
 
 class TemplateDetailResponse(BaseModel):
     id: int
@@ -181,6 +182,7 @@ class TemplateDetailResponse(BaseModel):
     keywords: List[str]
     skeleton: str
     category: Optional[str]
+    medical_field: str
     language: Optional[str]
     is_active: bool
     created_at: datetime
@@ -192,6 +194,7 @@ class TemplateCreateRequest(BaseModel):
     keywords: List[str]
     skeleton: str
     category: Optional[str] = None
+    medical_field: str = "radiology"
     language: Optional[str] = 'fr'
     is_active: bool = True
 
@@ -200,6 +203,7 @@ class TemplateUpdateRequest(BaseModel):
     keywords: Optional[List[str]] = None
     skeleton: Optional[str] = None
     category: Optional[str] = None
+    medical_field: Optional[str] = None
     language: Optional[str] = None
     is_active: Optional[bool] = None
 
@@ -257,17 +261,36 @@ def format_skeleton(skeleton: str, meta: Meta, indication: str) -> str:
 # Note: Root path "/" is handled by SPA catch-all at end of file
 # Use /health for API health checks
 
+@app.get("/medical-fields")
+async def list_medical_fields():
+    """Get all available medical fields"""
+    return {
+        "fields": [
+            {"value": field.value, "label": field.value.replace("_", " ").title()}
+            for field in MedicalField
+        ]
+    }
+
 @app.get("/templates", response_model=List[TemplateResponse])
-async def list_templates(db: Session = Depends(get_db)):
-    """Get all available templates"""
-    templates = db.query(Template).filter(Template.is_active == True).all()
+async def list_templates(
+    medical_field: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Get all available templates, optionally filtered by medical field"""
+    query = db.query(Template).filter(Template.is_active == True)
+
+    if medical_field:
+        query = query.filter(Template.medical_field == medical_field)
+
+    templates = query.all()
     return [
         TemplateResponse(
             id=t.id,
             template_id=t.template_id,
             title=t.title,
             keywords=t.keywords,
-            category=t.category
+            category=t.category,
+            medical_field=t.medical_field.value
         )
         for t in templates
     ]
@@ -315,6 +338,7 @@ async def create_template(
         keywords=template_data.keywords,
         skeleton=template_data.skeleton,
         category=template_data.category,
+        medical_field=MedicalField(template_data.medical_field),
         language=template_data.language,
         is_active=template_data.is_active,
         created_at=datetime.now(),
@@ -348,6 +372,8 @@ async def update_template(
         template.skeleton = template_data.skeleton
     if template_data.category is not None:
         template.category = template_data.category
+    if template_data.medical_field is not None:
+        template.medical_field = MedicalField(template_data.medical_field)
     if template_data.language is not None:
         template.language = template_data.language
     if template_data.is_active is not None:
