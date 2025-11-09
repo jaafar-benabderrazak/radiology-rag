@@ -97,6 +97,9 @@ export interface TemplateDetail {
   category: string | null
   language: string | null
   is_active: boolean
+  created_by_user_id: number | null
+  is_system_template: boolean
+  is_shared: boolean
   created_at: string
   updated_at: string | null
 }
@@ -109,6 +112,7 @@ export interface TemplateCreateRequest {
   category?: string | null
   language?: string
   is_active?: boolean
+  is_shared?: boolean
 }
 
 export interface TemplateUpdateRequest {
@@ -118,6 +122,7 @@ export interface TemplateUpdateRequest {
   category?: string | null
   language?: string
   is_active?: boolean
+  is_shared?: boolean
 }
 
 export interface ReportHistory {

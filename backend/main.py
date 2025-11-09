@@ -183,6 +183,9 @@ class TemplateDetailResponse(BaseModel):
     category: Optional[str]
     language: Optional[str]
     is_active: bool
+    created_by_user_id: Optional[int]
+    is_system_template: bool
+    is_shared: bool
     created_at: datetime
     updated_at: Optional[datetime]
 
@@ -194,6 +197,7 @@ class TemplateCreateRequest(BaseModel):
     category: Optional[str] = None
     language: Optional[str] = 'fr'
     is_active: bool = True
+    is_shared: bool = False
 
 class TemplateUpdateRequest(BaseModel):
     title: Optional[str] = None
@@ -202,6 +206,7 @@ class TemplateUpdateRequest(BaseModel):
     category: Optional[str] = None
     language: Optional[str] = None
     is_active: Optional[bool] = None
+    is_shared: Optional[bool] = None
 
 class ReportHistoryResponse(BaseModel):
     id: int
@@ -229,14 +234,33 @@ SYSTEM_INSTRUCTIONS = (
     "Output ONLY the completed report with all placeholders filled."
 )
 
-def choose_template_auto(text: str, db: Session) -> Optional[Template]:
+def choose_template_auto(text: str, db: Session, user_id: Optional[int] = None) -> Optional[Template]:
     """
     Auto-select template using Gemini AI for intelligent classification
 
     Uses Gemini to understand the clinical context and select the most
     appropriate template. Falls back to keyword matching if Gemini fails.
+
+    Templates are filtered to include:
+    - System templates (is_system_template=True)
+    - User's own templates (created_by_user_id=user_id)
+    - Shared templates (is_shared=True)
     """
-    templates = db.query(Template).filter(Template.is_active == True).all()
+    # Build query to get templates available to this user
+    query = db.query(Template).filter(Template.is_active == True)
+
+    if user_id is not None:
+        # Include: system templates OR user's own templates OR shared templates
+        query = query.filter(
+            (Template.is_system_template == True) |
+            (Template.created_by_user_id == user_id) |
+            (Template.is_shared == True)
+        )
+    else:
+        # No user context: only system templates
+        query = query.filter(Template.is_system_template == True)
+
+    templates = query.all()
     if not templates:
         return None
 
@@ -449,9 +473,28 @@ def format_skeleton(skeleton: str, meta: Meta, indication: str) -> str:
 # to serve the frontend after static files are mounted
 
 @app.get("/templates", response_model=List[TemplateResponse])
-async def list_templates(db: Session = Depends(get_db)):
-    """Get all available templates"""
-    templates = db.query(Template).filter(Template.is_active == True).all()
+async def list_templates(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all available templates for the current user
+
+    Returns:
+    - System templates (is_system_template=True)
+    - User's own templates (created_by_user_id=current_user.id)
+    - Shared templates (is_shared=True)
+    """
+    query = db.query(Template).filter(Template.is_active == True)
+
+    # Filter based on user context
+    query = query.filter(
+        (Template.is_system_template == True) |
+        (Template.created_by_user_id == current_user.id) |
+        (Template.is_shared == True)
+    )
+
+    templates = query.all()
     return [
         TemplateResponse(
             id=t.id,
@@ -508,6 +551,9 @@ async def create_template(
         category=template_data.category,
         language=template_data.language,
         is_active=template_data.is_active,
+        created_by_user_id=current_user.id,
+        is_system_template=False,  # User-created templates are not system templates
+        is_shared=template_data.is_shared,
         created_at=datetime.now(),
         updated_at=datetime.now()
     )
@@ -543,6 +589,8 @@ async def update_template(
         template.language = template_data.language
     if template_data.is_active is not None:
         template.is_active = template_data.is_active
+    if template_data.is_shared is not None:
+        template.is_shared = template_data.is_shared
 
     template.updated_at = datetime.now()
 
@@ -609,8 +657,8 @@ async def generate(
         if not template:
             raise HTTPException(status_code=404, detail=f"Template '{req.templateId}' not found")
     else:
-        # Auto-select template
-        template = choose_template_auto(req.input, db)
+        # Auto-select template (using user context for personalized template selection)
+        template = choose_template_auto(req.input, db, user_id=current_user.id)
         if not template:
             raise HTTPException(status_code=404, detail="No suitable template found")
 
