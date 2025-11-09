@@ -407,6 +407,16 @@ export interface ReportStats {
   by_template: Record<string, number>
 }
 
+export async function fetchReportHistory(limit: number = 50, skip: number = 0): Promise<ReportHistory[]> {
+  const res = await fetch(`${base}/reports/history?limit=${limit}&skip=${skip}`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
 export async function fetchReports(params: URLSearchParams): Promise<ReportSummary[]> {
   const url = `${base}/api/reports?${params.toString()}`
   const res = await fetch(url, { headers: getAuthHeaders() })
