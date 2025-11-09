@@ -22,7 +22,7 @@ from cache_service import cache
 from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
 from ai_analysis_service import ai_analysis_service
-from auth import get_current_active_user, get_current_admin_user
+from auth import get_current_user, get_current_active_user, get_current_admin_user
 from routers import auth_router, users_router, reports_router, templates_router, suggestions_router, notifications_router, backup_router, voice_router, dicom_router
 from critical_findings_detector import critical_detector
 from notification_service import notification_service
