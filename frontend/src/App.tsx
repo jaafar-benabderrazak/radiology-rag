@@ -1,20 +1,3 @@
-<<<<<<< HEAD
-import { useState, useEffect } from "react"
-import {
-  fetchTemplates,
-  generate,
-  downloadReportWord,
-  downloadReportPDF,
-  generateSummary,
-  validateReport,
-  type Template,
-  type GenerateResponse,
-  type SummaryResult,
-  type ValidationResult
-} from "./lib/api"
-// Language interface
-type Language = 'en' | 'fr'
-=======
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import Landing from './pages/Landing'
@@ -26,7 +9,6 @@ import Admin from './pages/Admin'
 import Features from './pages/product/Features'
 import HowItWorks from './pages/product/HowItWorks'
 import Pricing from './pages/product/Pricing'
->>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
 // Company pages
 import About from './pages/company/About'

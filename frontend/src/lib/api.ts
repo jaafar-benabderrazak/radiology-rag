@@ -1,18 +1,4 @@
 const getApiBase = () => {
-<<<<<<< HEAD
-  if (import.meta.env.VITE_API_BASE) {
-    return import.meta.env.VITE_API_BASE
-  }
-  if (typeof window !== 'undefined' && (window as any).__API_BASE__) {
-    return (window as any).__API_BASE__
-  }
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    // In production (Autoscale), frontend and backend are on the same origin
-    const protocol = window.location.protocol
-    const hostname = window.location.hostname
-    return `${protocol}//${hostname}`
-  }
-=======
   console.log('[API Config] Detecting API base URL...')
 
   // Priority 1: Environment variable
@@ -58,15 +44,11 @@ const getApiBase = () => {
 
   // Priority 4: Local development fallback
   console.log('[API Config] Local development mode - Using localhost:8000')
->>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
   return 'http://localhost:8000'
 }
 
 const base = getApiBase()
-<<<<<<< HEAD
-=======
 console.log('[API Config] Final API base URL:', base)
->>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
 // Export base URL for components that need direct fetch calls
 export const API_BASE = base
@@ -374,7 +356,6 @@ export function logout(): void {
   removeToken()
 }
 
-<<<<<<< HEAD
 // ===========================
 // Report History API
 // ===========================
@@ -670,96 +651,5 @@ export async function quickSuggest(findings: string, suggestionType: 'differenti
     body: JSON.stringify({ findings, suggestion_type: suggestionType })
   })
   if (!res.ok) throw new Error(await res.text())
-=======
-// Template Management API (Admin only)
-export async function fetchAllTemplates(): Promise<TemplateDetail[]> {
-  const res = await fetch(`${base}/admin/templates`, {
-    headers: getAuthHeaders()
-  })
-  if (!res.ok) {
-    if (res.status === 403) {
-      throw new Error('Admin access required')
-    }
-    throw new Error(await res.text())
-  }
-  return res.json()
-}
-
-export async function getTemplate(templateId: string): Promise<TemplateDetail> {
-  const res = await fetch(`${base}/templates/${templateId}`, {
-    headers: getAuthHeaders()
-  })
-  if (!res.ok) {
-    if (res.status === 403) {
-      throw new Error('Admin access required')
-    }
-    throw new Error(await res.text())
-  }
-  return res.json()
-}
-
-export async function createTemplate(templateData: TemplateCreateRequest): Promise<TemplateDetail> {
-  const res = await fetch(`${base}/admin/templates`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(templateData)
-  })
-  if (!res.ok) {
-    if (res.status === 403) {
-      throw new Error('Admin access required')
-    }
-    const errorText = await res.text()
-    throw new Error(errorText || 'Failed to create template')
-  }
-  return res.json()
-}
-
-export async function updateTemplate(templateId: string, templateData: TemplateUpdateRequest): Promise<TemplateDetail> {
-  const res = await fetch(`${base}/admin/templates/${templateId}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(templateData)
-  })
-  if (!res.ok) {
-    if (res.status === 403) {
-      throw new Error('Admin access required')
-    }
-    throw new Error(await res.text())
-  }
-  return res.json()
-}
-
-export async function deleteTemplate(templateId: string): Promise<void> {
-  const res = await fetch(`${base}/admin/templates/${templateId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  })
-  if (!res.ok) {
-    if (res.status === 403) {
-      throw new Error('Admin access required')
-    }
-    throw new Error(await res.text())
-  }
-}
-
-// Report History API
-export async function fetchReportHistory(limit: number = 50, skip: number = 0): Promise<ReportHistory[]> {
-  const res = await fetch(`${base}/reports/history?limit=${limit}&skip=${skip}`, {
-    headers: getAuthHeaders()
-  })
-  if (!res.ok) {
-    throw new Error(await res.text())
-  }
-  return res.json()
-}
-
-export async function fetchReportDetail(reportId: number): Promise<ReportDetail> {
-  const res = await fetch(`${base}/reports/${reportId}`, {
-    headers: getAuthHeaders()
-  })
-  if (!res.ok) {
-    throw new Error(await res.text())
-  }
->>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
   return res.json()
 }
