@@ -56,6 +56,7 @@ def init_database():
                 print("ℹ️  You can add templates later via the application UI")
 
         # Create default users if they don't exist
+        # If they exist, update their passwords to ensure compatibility with current hashing
         print("\nChecking for default users...")
         admin_email = "admin@radiology.com"
         existing_admin = db.query(User).filter(User.email == admin_email).first()
@@ -81,6 +82,11 @@ def init_database():
             print(f"\n⚠️  IMPORTANT: Change the admin password after first login!")
         else:
             print("✓ Admin user already exists")
+            # Update password to ensure it's using the current hashing method
+            print("  Updating admin password to ensure compatibility...")
+            existing_admin.hashed_password = get_password_hash("admin123")
+            db.commit()
+            print("  ✓ Admin password updated")
 
         # Create a sample doctor user
         doctor_email = "doctor@hospital.com"
@@ -108,6 +114,11 @@ def init_database():
             print(f"  Password: doctor123")
         else:
             print("✓ Sample doctor user already exists")
+            # Update password to ensure it's using the current hashing method
+            print("  Updating doctor password to ensure compatibility...")
+            existing_doctor.hashed_password = get_password_hash("doctor123")
+            db.commit()
+            print("  ✓ Doctor password updated")
 
     except Exception as e:
         print(f"✗ Error initializing database: {e}")
