@@ -571,58 +571,6 @@ export interface TemplateUpdate {
   is_active?: boolean
 }
 
-export async function fetchAllTemplates(includeInactive: boolean = false): Promise<TemplateResponse[]> {
-  const url = `${base}/api/templates?include_inactive=${includeInactive}`
-  const res = await fetch(url, { headers: getAuthHeaders() })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-export async function fetchMyTemplates(): Promise<TemplateResponse[]> {
-  const url = `${base}/api/templates/my`
-  const res = await fetch(url, { headers: getAuthHeaders() })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-export async function createTemplate(data: TemplateCreate): Promise<TemplateResponse> {
-  const url = `${base}/api/templates`
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data)
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-export async function getTemplateById(id: number): Promise<TemplateResponse> {
-  const url = `${base}/api/templates/${id}`
-  const res = await fetch(url, { headers: getAuthHeaders() })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-export async function updateTemplate(id: number, data: TemplateUpdate): Promise<TemplateResponse> {
-  const url = `${base}/api/templates/${id}`
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data)
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
-}
-
-export async function deleteTemplate(id: number): Promise<void> {
-  const url = `${base}/api/templates/${id}`
-  const res = await fetch(url, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  })
-  if (!res.ok) throw new Error(await res.text())
-}
-
 // ===========================
 // AI Suggestions API
 // ===========================
