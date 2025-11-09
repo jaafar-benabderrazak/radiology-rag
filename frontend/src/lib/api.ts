@@ -171,7 +171,9 @@ export interface GenerateResponse {
 }
 
 export async function fetchTemplates(): Promise<Template[]> {
-  const res = await fetch(`${base}/templates`)
+  const res = await fetch(`${base}/templates`, {
+    headers: getAuthHeaders()
+  })
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }
