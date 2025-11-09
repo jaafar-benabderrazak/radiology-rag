@@ -43,7 +43,7 @@ export default function AnimatedWorkflow({ language }: AnimatedWorkflowProps) {
         {
           number: 2,
           title: 'AI Analysis',
-          description: 'Gemini 2.0 processes and analyzes',
+          description: 'Advanced AI processes and analyzes',
           icon: '🤖',
           details: [
             'Template matching',
@@ -106,7 +106,7 @@ export default function AnimatedWorkflow({ language }: AnimatedWorkflowProps) {
         {
           number: 2,
           title: 'Analyse IA',
-          description: 'Gemini 2.0 traite et analyse',
+          description: 'IA avancée traite et analyse',
           icon: '🤖',
           details: [
             'Correspondance de modèle',

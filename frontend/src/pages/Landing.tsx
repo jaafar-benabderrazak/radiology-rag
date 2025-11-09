@@ -46,7 +46,7 @@ const translations = {
     featuresList: {
       aiPowered: {
         title: 'AI-Powered Generation',
-        desc: 'Advanced Gemini 2.0 AI automatically generates comprehensive reports from clinical indications'
+        desc: 'Advanced AI automatically generates comprehensive reports from clinical indications'
       },
       voice: {
         title: 'Voice Recognition',
@@ -132,7 +132,7 @@ const translations = {
     featuresList: {
       aiPowered: {
         title: 'Génération par IA',
-        desc: "L'IA Gemini 2.0 génère automatiquement des rapports complets à partir des indications cliniques"
+        desc: "L'IA avancée génère automatiquement des rapports complets à partir des indications cliniques"
       },
       voice: {
         title: 'Reconnaissance Vocale',
@@ -283,7 +283,7 @@ export default function Landing() {
         </div>
         <div className="hero-container">
           <div className="hero-content">
-            <div className="badge">✨ Powered by Gemini 2.0 AI</div>
+            <div className="badge">✨ AI-Powered Radiology Assistant</div>
             <h1 className="hero-title animate-fade-in">
               {t.tagline}
               <span className="hero-gradient"> {t.taglineHighlight}</span>

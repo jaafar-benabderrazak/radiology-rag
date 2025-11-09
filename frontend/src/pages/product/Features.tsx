@@ -14,7 +14,7 @@ export default function Features() {
       title: 'AI-Powered Generation',
       category: 'Core Technology',
       gradient: 'from-purple-500 to-pink-500',
-      description: 'Advanced Gemini 2.0 AI automatically generates comprehensive reports from clinical indications',
+      description: 'Advanced AI automatically generates comprehensive reports from clinical indications',
       benefits: [
         'Natural language understanding',
         'Context-aware generation',
@@ -211,7 +211,7 @@ export default function Features() {
       <section className="container px-4 py-16 md:py-24">
         <div className="mx-auto max-w-4xl text-center space-y-4">
           <Badge variant="secondary" className="mb-4">
-            ✨ Powered by Gemini 2.0 AI
+            ✨ AI-Powered Radiology Platform
           </Badge>
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
             Powerful Features for
