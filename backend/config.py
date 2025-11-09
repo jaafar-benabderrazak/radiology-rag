@@ -2,19 +2,55 @@ import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    # Database
+    # Database Configuration
+    # Priority: SUPABASE_DATABASE_URL > DATABASE_URL > Individual PostgreSQL settings > SQLite fallback
+
+    # Supabase connection string (recommended)
+    SUPABASE_DATABASE_URL: str = os.getenv("SUPABASE_DATABASE_URL", "")
+
+    # Generic database URL (alternative)
+    DATABASE_URL_OVERRIDE: str = os.getenv("DATABASE_URL", "")
+
+    # Individual PostgreSQL settings (legacy support)
     POSTGRES_USER: str = os.getenv("POSTGRES_USER", "radiology_user")
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "secure_password")
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "radiology_templates")
     POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "localhost")
     POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
-    
+
     USE_SQLITE: bool = os.getenv("USE_SQLITE", "true").lower() == "true"
+
+    # Supabase-specific settings
+    SUPABASE_POOLER_ENABLED: bool = os.getenv("SUPABASE_POOLER_ENABLED", "false").lower() == "true"
+    SUPABASE_POOLER_URL: str = os.getenv("SUPABASE_POOLER_URL", "")
 
     @property
     def DATABASE_URL(self) -> str:
+        """
+        Get database URL with the following priority:
+        1. SUPABASE_DATABASE_URL (direct Supabase connection)
+        2. SUPABASE_POOLER_URL (if pooler is enabled)
+        3. DATABASE_URL (generic override)
+        4. Constructed PostgreSQL URL from individual settings
+        5. SQLite fallback for local development
+        """
+        # Priority 1: Supabase pooler (for production with connection pooling)
+        if self.SUPABASE_POOLER_ENABLED and self.SUPABASE_POOLER_URL:
+            return self.SUPABASE_POOLER_URL
+
+        # Priority 2: Direct Supabase connection
+        if self.SUPABASE_DATABASE_URL:
+            return self.SUPABASE_DATABASE_URL
+
+        # Priority 3: Generic DATABASE_URL override
+        if self.DATABASE_URL_OVERRIDE:
+            return self.DATABASE_URL_OVERRIDE
+
+        # Priority 4: SQLite for local development
         if self.USE_SQLITE:
             return "sqlite:///./radiology_db.sqlite"
+
+        # Priority 5: Constructed PostgreSQL URL from individual settings
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     # Redis
