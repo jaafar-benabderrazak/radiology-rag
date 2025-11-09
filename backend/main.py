@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import List, Optional, Literal
 from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -22,6 +22,7 @@ from cache_service import cache
 from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
 from ai_analysis_service import ai_analysis_service
+from template_loader import TemplateLoader
 from auth import get_current_user, get_current_active_user, get_current_admin_user
 from routers import auth_router, users_router, reports_router, templates_router, suggestions_router, notifications_router, backup_router, voice_router, dicom_router
 from critical_findings_detector import critical_detector
@@ -616,6 +617,70 @@ async def delete_template(
     db.commit()
 
     return None
+
+@app.post("/admin/templates/upload")
+async def upload_template_file(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """
+    Upload a Word document and extract template information (admin only)
+
+    Expects a .docx file with structure:
+    - Line 1: Template title
+    - Line 2: Keywords (comma-separated)
+    - Rest: Template skeleton with placeholders
+
+    Returns extracted template data ready for creation
+    """
+    # Validate file type
+    if not file.filename.endswith('.docx'):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .docx files are supported"
+        )
+
+    # Save uploaded file temporarily
+    import tempfile
+    import shutil
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_file:
+            shutil.copyfileobj(file.file, tmp_file)
+            tmp_path = Path(tmp_file.name)
+
+        # Use TemplateLoader to parse the document
+        loader = TemplateLoader()
+        template_data = loader._load_template(tmp_path)
+
+        if not template_data:
+            raise HTTPException(
+                status_code=400,
+                detail="Failed to extract template from document. Please ensure the document has the correct structure."
+            )
+
+        # Remove formatting_metadata as it's not needed for the response
+        result = {
+            'template_id': template_data['template_id'],
+            'title': template_data['title'],
+            'keywords': template_data['keywords'],
+            'skeleton': template_data['skeleton'],
+            'category': template_data.get('category', 'General'),
+            'language': template_data.get('language', 'en')
+        }
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing file: {str(e)}"
+        )
+    finally:
+        # Clean up temporary file
+        if tmp_path.exists():
+            tmp_path.unlink()
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(

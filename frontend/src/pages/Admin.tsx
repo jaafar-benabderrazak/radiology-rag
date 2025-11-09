@@ -6,6 +6,7 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  uploadTemplateFile,
   type TemplateDetail,
   type TemplateCreateRequest,
   type TemplateUpdateRequest
@@ -140,6 +141,43 @@ export default function Admin() {
     }
   }
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith('.docx')) {
+      setError('Please upload a Word document (.docx)')
+      return
+    }
+
+    try {
+      setError(null)
+      setSaving(true)
+
+      const extractedData = await uploadTemplateFile(file)
+
+      // Pre-fill the form with extracted data and open modal
+      setEditingTemplate(null)
+      setFormData({
+        template_id: extractedData.template_id,
+        title: extractedData.title,
+        keywords: extractedData.keywords,
+        skeleton: extractedData.skeleton,
+        category: extractedData.category || '',
+        language: extractedData.language || 'fr',
+        is_active: true,
+        is_shared: false
+      })
+      setShowModal(true)
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload template file')
+    } finally {
+      setSaving(false)
+      // Reset file input
+      event.target.value = ''
+    }
+  }
+
   const filteredTemplates = templates.filter(t => {
     const matchesSearch = !searchTerm ||
       t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -205,6 +243,18 @@ export default function Admin() {
           <button className="btn btn-primary" onClick={handleCreate}>
             + New Template
           </button>
+
+          <label className="btn btn-secondary btn-upload" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>📄</span>
+            Upload Word File
+            <input
+              type="file"
+              accept=".docx"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+              disabled={saving}
+            />
+          </label>
         </div>
 
         <div className="templates-grid">

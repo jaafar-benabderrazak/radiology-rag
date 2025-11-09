@@ -432,6 +432,72 @@ export async function fetchReportHistory(limit: number = 50, skip: number = 0): 
   return res.json()
 }
 
+// ========================================
+// Admin Template Management Functions
+// ========================================
+
+export async function fetchAllTemplates(): Promise<TemplateDetail[]> {
+  const res = await fetch(`${base}/admin/templates`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function createTemplate(data: TemplateCreateRequest): Promise<TemplateDetail> {
+  const res = await fetch(`${base}/admin/templates`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function updateTemplate(templateId: string, data: TemplateUpdateRequest): Promise<TemplateDetail> {
+  const res = await fetch(`${base}/admin/templates/${templateId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data)
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function deleteTemplate(templateId: string): Promise<void> {
+  const res = await fetch(`${base}/admin/templates/${templateId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+}
+
+export async function uploadTemplateFile(file: File): Promise<{ template_id: string, title: string, skeleton: string, keywords: string[] }> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const res = await fetch(`${base}/admin/templates/upload`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`
+    },
+    body: formData
+  })
+
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
 export async function fetchReports(params: URLSearchParams): Promise<ReportSummary[]> {
   const url = `${base}/api/reports?${params.toString()}`
   const res = await fetch(url, { headers: getAuthHeaders() })
