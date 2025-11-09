@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 echo "======================================================================"
 echo "  Radiology RAG - Replit Deployment Startup"
@@ -16,30 +15,21 @@ print_success() { echo -e "${GREEN}✓${NC} $1"; }
 print_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 print_error() { echo -e "${RED}✗${NC} $1"; }
 
-# Check for required environment variables
+# Check for required environment variables (optional - continue without API key for now)
 echo ""
 echo "1. Checking environment variables..."
 if [ -z "$GEMINI_API_KEY" ] && [ -z "$GOOGLE_API_KEY" ]; then
-    print_error "GEMINI_API_KEY or GOOGLE_API_KEY not set!"
-    echo ""
-    echo "  Please add your Gemini API key to Replit Secrets:"
-    echo "  1. Click the 'Secrets' icon (🔒) in the left sidebar"
-    echo "  2. Add key: GEMINI_API_KEY"
-    echo "  3. Add value: your_api_key_here"
-    echo "  4. Restart the Repl"
-    echo ""
-    exit 1
+    print_warning "GEMINI_API_KEY or GOOGLE_API_KEY not set"
+    print_warning "AI features will be limited without an API key"
+else
+    print_success "API key configured"
 fi
-print_success "API key configured"
 
 # Note: Package installation is handled by Replit's build step
 # During deployment, the build command already runs:
-# - pip install -r backend/requirements.txt
+# - pip install -r backend/requirements-deploy.txt
 # - cd frontend && npm install && npm run build
 
-# Initialize database
-echo ""
-echo "2. Initializing database..."
 cd backend
 
 # Find Python executable (Replit manages this)
@@ -47,17 +37,15 @@ if [ -f "../.pythonlibs/bin/python" ]; then
     PYTHON_BIN="../.pythonlibs/bin/python"
     print_success "Using Replit Python: $PYTHON_BIN"
 else
-    PYTHON_BIN="python"
-    print_warning "Using system Python: $PYTHON_BIN"
+    PYTHON_BIN="python3"
+    print_success "Using system Python: $PYTHON_BIN"
 fi
 
-# Run init_db.py to create tables and load templates
-echo "  Loading templates from .docx files..."
-$PYTHON_BIN init_db.py || {
-    print_warning "init_db.py failed, trying basic table creation..."
-    $PYTHON_BIN -c "from database import Base, engine; Base.metadata.create_all(bind=engine); print('Tables created')"
-}
-print_success "Database ready"
+# Skip database initialization in production - let the app handle it on startup
+# This avoids startup delays and schema migration issues
+echo ""
+echo "2. Database will be initialized on first request"
+print_success "Database initialization deferred to app startup"
 
 # Start the backend server (which now serves the frontend)
 echo ""
