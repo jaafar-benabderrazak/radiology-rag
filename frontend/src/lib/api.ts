@@ -208,7 +208,17 @@ export async function downloadReportWord(reportId: number, highlight: boolean = 
 export async function downloadReportPDF(reportId: number): Promise<Blob> {
   const url = `${base}/reports/${reportId}/download/pdf`
   const res = await fetch(url, { headers: getAuthHeaders() })
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) {
+    // Try to parse JSON error response
+    const text = await res.text()
+    try {
+      const errorData = JSON.parse(text)
+      throw new Error(errorData.detail || 'Failed to download PDF')
+    } catch (jsonError) {
+      // If not JSON, use text response
+      throw new Error(text || 'Failed to download PDF')
+    }
+  }
   return res.blob()
 }
 

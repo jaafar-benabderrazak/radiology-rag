@@ -809,7 +809,18 @@ async def download_report_pdf(
 
     Args:
         report_id: The report ID
+
+    Note: PDF generation requires LibreOffice, which is not available in lightweight deployments.
+          For lightweight deployments, download the Word document instead.
     """
+    # Check if LibreOffice is available
+    import shutil
+    if not shutil.which('soffice'):
+        raise HTTPException(
+            status_code=501,
+            detail="PDF export is not available in this deployment. LibreOffice is not installed to reduce deployment size. Please download the Word document (.docx) instead, which can be opened in Microsoft Word, Google Docs, or LibreOffice."
+        )
+
     # Get report from database (ensure user owns it)
     report = db.query(Report).filter(
         Report.id == report_id,
