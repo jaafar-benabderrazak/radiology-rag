@@ -35,3 +35,8 @@ redis==5.0.1
 
 # Optional: Vector database (gracefully degrades if not available)
 qdrant-client==1.7.0
+
+# RAG Dependencies (for semantic search)
+sentence-transformers==2.2.2
+torch==2.0.1
+transformers==4.35.0
