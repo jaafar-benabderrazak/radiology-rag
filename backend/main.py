@@ -230,12 +230,112 @@ SYSTEM_INSTRUCTIONS = (
 )
 
 def choose_template_auto(text: str, db: Session) -> Optional[Template]:
-    """Auto-select template based on keywords"""
+    """
+    Auto-select template based on keywords with intelligent scoring
+
+    Uses weighted keyword matching to prioritize:
+    - Anatomical terms (highest priority)
+    - Specific medical terms (high priority)
+    - Generic terms (lower priority)
+    """
     templates = db.query(Template).filter(Template.is_active == True).all()
     if not templates:
         return None
 
     low = text.lower()
+
+    # Anatomical keywords that should have highest priority
+    # These strongly indicate specific body regions/organs
+    anatomical_keywords = {
+        # Liver/biliary
+        'segment', 'segmentaire', 'foie', 'hépatique', 'hepatique', 'biliaire', 'bile',
+        'vésicule', 'vesicule', 'cholédoque', 'choledoque', 'voies biliaires',
+        # Intestines
+        'intestin', 'grêle', 'grele', 'iléon', 'ileon', 'jéjunum', 'jejunum', 'duodénum', 'duodenum',
+        'côlon', 'colon', 'rectum', 'sigmoïde', 'sigmoide', 'caecum', 'cecum',
+        # Spine
+        'vertèbre', 'vertebre', 'rachis', 'cervical', 'thoracique', 'lombaire', 'sacré', 'sacre',
+        'disque', 'disc', 'l1', 'l2', 'l3', 'l4', 'l5', 's1', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7',
+        # Joints
+        'genou', 'cheville', 'épaule', 'epaule', 'coude', 'poignet', 'hanche',
+        # Brain
+        'cérébr', 'cerebr', 'encéph', 'enceph', 'cerveau',
+        # Chest
+        'pulmonaire', 'poumon', 'thorax', 'médiastin', 'mediastin',
+        # Breast
+        'sein', 'mammaire', 'breast',
+        # Other
+        'rein', 'rénal', 'renal', 'pancréa', 'pancrea', 'rate', 'splén', 'splen'
+    }
+
+    # Specific medical terms (medium-high priority)
+    specific_keywords = {
+        'lésion', 'lesion', 'masse', 'tumeur', 'kyste', 'nodule',
+        'sténose', 'stenose', 'dilatation', 'compression', 'hernie',
+        'fracture', 'luxation', 'rupture', 'déchirure', 'dechirure',
+        'hypodense', 'hyperdense', 'rehaussement', 'enhancement',
+        'ischémie', 'ischemie', 'infarctus', 'hémorragie', 'hemorragie'
+    }
+
+    def score_template(template: Template) -> float:
+        """Calculate weighted score for template match"""
+        score = 0.0
+        matched_anatomical = 0
+        matched_specific = 0
+        matched_generic = 0
+
+        for keyword in template.keywords:
+            kw_lower = keyword.lower()
+
+            if kw_lower not in low:
+                continue
+
+            # Check if keyword is anatomical (highest weight)
+            is_anatomical = any(anat in kw_lower for anat in anatomical_keywords)
+            if is_anatomical:
+                # Anatomical keywords get weight of 10
+                score += 10.0
+                matched_anatomical += 1
+                continue
+
+            # Check if keyword is specific medical term (high weight)
+            is_specific = any(spec in kw_lower for spec in specific_keywords)
+            if is_specific:
+                # Specific medical terms get weight of 3
+                score += 3.0
+                matched_specific += 1
+                continue
+
+            # Generic keyword (baseline weight)
+            score += 1.0
+            matched_generic += 1
+
+        # Bonus for title match (indicates template is very relevant)
+        if template.title.lower() in low or any(word in low for word in template.title.lower().split()):
+            score += 5.0
+
+        # Debug logging
+        if matched_anatomical > 0 or matched_specific > 0:
+            print(f"  {template.title}: score={score:.1f} (anat={matched_anatomical}, spec={matched_specific}, gen={matched_generic})")
+
+        return score
+
+    # Score all templates
+    print(f"Auto-selecting template for: {text[:100]}...")
+    scored_templates = [(t, score_template(t)) for t in templates]
+
+    # Sort by score (highest first)
+    scored_templates.sort(key=lambda x: x[1], reverse=True)
+
+    # Return template with highest score, or None if no matches
+    if scored_templates and scored_templates[0][1] > 0:
+        best_template = scored_templates[0][0]
+        best_score = scored_templates[0][1]
+        print(f"✓ Selected: {best_template.title} (score: {best_score:.1f})")
+        return best_template
+
+    # Fallback: use simple keyword count
+    print("⚠ No good match found, using simple keyword count")
     best = max(templates, key=lambda t: sum(1 for k in t.keywords if k.lower() in low))
     return best
 
