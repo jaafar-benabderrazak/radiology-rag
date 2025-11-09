@@ -231,21 +231,112 @@ SYSTEM_INSTRUCTIONS = (
 
 def choose_template_auto(text: str, db: Session) -> Optional[Template]:
     """
-    Auto-select template based on keywords with intelligent scoring
+    Auto-select template using Gemini AI for intelligent classification
+
+    Uses Gemini to understand the clinical context and select the most
+    appropriate template. Falls back to keyword matching if Gemini fails.
+    """
+    templates = db.query(Template).filter(Template.is_active == True).all()
+    if not templates:
+        return None
+
+    # Try Gemini-based classification first
+    try:
+        selected_template = _choose_template_with_gemini(text, templates)
+        if selected_template:
+            return selected_template
+        print("⚠ Gemini template selection returned no result, using fallback")
+    except Exception as e:
+        print(f"⚠ Gemini template selection failed ({e}), using fallback")
+
+    # Fallback to weighted keyword matching
+    return _choose_template_with_keywords(text, templates)
+
+
+def _choose_template_with_gemini(text: str, templates: List[Template]) -> Optional[Template]:
+    """Use Gemini AI to intelligently select the most appropriate template"""
+
+    # Build template list for Gemini
+    template_descriptions = []
+    for i, t in enumerate(templates, 1):
+        keywords_str = ", ".join(t.keywords[:8])  # First 8 keywords
+        template_descriptions.append(
+            f"{i}. {t.title} (ID: {t.template_id})\n"
+            f"   Keywords: {keywords_str}\n"
+            f"   Category: {t.category or 'General'}"
+        )
+
+    templates_list = "\n\n".join(template_descriptions)
+
+    # Create classification prompt
+    classification_prompt = f"""You are a radiology AI assistant. Based on the clinical indication below, select the MOST APPROPRIATE radiology report template.
+
+CLINICAL INDICATION:
+{text}
+
+AVAILABLE TEMPLATES:
+{templates_list}
+
+INSTRUCTIONS:
+1. Analyze the clinical indication carefully
+2. Identify the anatomical region, imaging modality, and clinical context
+3. Select the single most appropriate template from the list above
+4. Respond with ONLY the template ID (e.g., "irm_biliaire" or "entero")
+
+Your response (template ID only):"""
+
+    try:
+        # Call Gemini with temperature=0 for deterministic results
+        model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            generation_config={
+                "temperature": 0,
+                "top_p": 1,
+                "top_k": 1,
+                "max_output_tokens": 50,
+            }
+        )
+
+        print(f"🤖 Using Gemini AI to classify template for: {text[:80]}...")
+        response = model.generate_content(classification_prompt)
+
+        # Extract template_id from response
+        selected_id = response.text.strip().lower()
+
+        # Remove any extra text, just keep the ID
+        selected_id = selected_id.split()[0]  # Take first word
+        selected_id = selected_id.replace('"', '').replace("'", '')  # Remove quotes
+
+        # Find matching template
+        for template in templates:
+            if template.template_id.lower() == selected_id:
+                print(f"✓ Gemini selected: {template.title} (ID: {template.template_id})")
+                return template
+            # Also try partial match (in case Gemini returns abbreviated ID)
+            if selected_id in template.template_id.lower() or template.template_id.lower() in selected_id:
+                print(f"✓ Gemini selected (partial match): {template.title} (ID: {template.template_id})")
+                return template
+
+        print(f"⚠ Gemini returned unknown template ID: {selected_id}")
+        return None
+
+    except Exception as e:
+        print(f"⚠ Gemini classification error: {e}")
+        return None
+
+
+def _choose_template_with_keywords(text: str, templates: List[Template]) -> Optional[Template]:
+    """
+    Fallback method: Auto-select template based on weighted keyword matching
 
     Uses weighted keyword matching to prioritize:
     - Anatomical terms (highest priority)
     - Specific medical terms (high priority)
     - Generic terms (lower priority)
     """
-    templates = db.query(Template).filter(Template.is_active == True).all()
-    if not templates:
-        return None
-
     low = text.lower()
 
     # Anatomical keywords that should have highest priority
-    # These strongly indicate specific body regions/organs
     anatomical_keywords = {
         # Liver/biliary
         'segment', 'segmentaire', 'foie', 'hépatique', 'hepatique', 'biliaire', 'bile',
