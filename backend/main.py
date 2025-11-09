@@ -61,15 +61,78 @@ app.include_router(dicom_router.router)
 async def startup_event():
     """Initialize database and services on startup"""
     import logging
+    from template_loader import load_templates_from_files
+    from auth import get_password_hash
+    from sqlalchemy.orm import Session
+
     logger = logging.getLogger(__name__)
-    
+
     print("=" * 60)
     print("Starting Radiology RAG Backend...")
     print("=" * 60)
 
-    # Create tables if they don't exist
-    Base.metadata.create_all(bind=engine, checkfirst=True)
-    print("✓ Database tables ready")
+    # Force recreate database tables to ensure schema is up-to-date
+    # This is safe for ephemeral deployments (Replit, Cloud Run)
+    try:
+        print("Recreating database tables...")
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+        print("✓ Database tables created with latest schema")
+
+        # Load templates after creating tables
+        from database import SessionLocal
+        db = SessionLocal()
+        try:
+            print("Loading templates from .docx files...")
+            templates_data = load_templates_from_files()
+
+            if templates_data:
+                for tpl_data in templates_data:
+                    template = Template(**tpl_data)
+                    db.add(template)
+                db.commit()
+                print(f"✓ Loaded {len(templates_data)} templates")
+            else:
+                print("⚠ No template files found (will use empty database)")
+
+            # Create default admin user
+            admin_user = User(
+                email="admin@radiology.com",
+                username="admin",
+                full_name="System Administrator",
+                hashed_password=get_password_hash("admin123"),
+                role="admin",
+                is_active=True,
+                is_verified=True
+            )
+            db.add(admin_user)
+
+            # Create default doctor user
+            doctor_user = User(
+                email="doctor@hospital.com",
+                username="doctor1",
+                full_name="Dr. John Smith",
+                hashed_password=get_password_hash("doctor123"),
+                role="doctor",
+                hospital_name="General Hospital",
+                is_active=True,
+                is_verified=True
+            )
+            db.add(doctor_user)
+            db.commit()
+            print("✓ Default users created (admin/admin123, doctor/doctor123)")
+
+        except Exception as e:
+            print(f"⚠ Template/user loading warning: {e}")
+            db.rollback()
+        finally:
+            db.close()
+
+    except Exception as e:
+        print(f"⚠ Database initialization warning: {e}")
+        # Try to create tables even if drop fails (for first run)
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+        print("✓ Database tables ready")
 
     # Initialize services (already done in their constructors)
     print("✓ Cache service initialized")
