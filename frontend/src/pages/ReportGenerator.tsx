@@ -21,12 +21,12 @@ type Language = 'en' | 'fr'
 const translations = {
   en: {
     title: "Radiology Report Generator",
-    subtitle: "AI-Powered Medical Report Generation with RAG",
+    subtitle: "AI-Powered Medical Report Generation",
     clinicalInfo: "Clinical Information",
     reportTemplate: "Report Template",
-    autoDetect: "Auto-detect (with RAG)",
-    autoDetectHelp: "AI will automatically select the best template based on your input and use similar cases for context",
-    selectedTemplateHelp: "Using selected template directly (no RAG)",
+    autoDetect: "Automatic Detection",
+    autoDetectHelp: "AI will automatically select the best template based on your input",
+    selectedTemplateHelp: "Using selected template directly",
     clinicalIndication: "Clinical Indication",
     voiceInput: "Voice Input",
     recording: "Recording...",
@@ -76,12 +76,12 @@ Patient with acute onset shortness of breath and pleuritic chest pain. D-dimer e
   },
   fr: {
     title: "Générateur de Rapports Radiologiques",
-    subtitle: "Génération de Rapports Médicaux Alimentée par IA avec RAG",
+    subtitle: "Génération de Rapports Médicaux Alimentée par IA",
     clinicalInfo: "Informations Cliniques",
     reportTemplate: "Modèle de Rapport",
-    autoDetect: "Détection automatique (avec RAG)",
-    autoDetectHelp: "L'IA sélectionnera automatiquement le meilleur modèle basé sur votre saisie et utilisera des cas similaires pour le contexte",
-    selectedTemplateHelp: "Utilisation du modèle sélectionné directement (sans RAG)",
+    autoDetect: "Détection automatique",
+    autoDetectHelp: "L'IA sélectionnera automatiquement le meilleur modèle basé sur votre saisie",
+    selectedTemplateHelp: "Utilisation du modèle sélectionné directement",
     clinicalIndication: "Indication Clinique",
     voiceInput: "Saisie Vocale",
     recording: "Enregistrement...",
@@ -604,22 +604,15 @@ export default function ReportGenerator() {
                 onChange={(e) => setSelectedTemplate(e.target.value)}
               >
                 <option value="auto">{t.autoDetect}</option>
-                {templates.map((tpl) => (
+                {templates && templates.length > 0 && templates.map((tpl) => (
                   <option key={tpl.template_id} value={tpl.template_id}>
-                    {tpl.title}
+                    {tpl.title} {tpl.category ? `(${tpl.category})` : ''}
                   </option>
                 ))}
               </select>
-              {selectedTemplate === "auto" && (
-                <p className="help-text">
-                  {t.autoDetectHelp}
-                </p>
-              )}
-              {selectedTemplate !== "auto" && (
-                <p className="help-text">
-                  {t.selectedTemplateHelp}
-                </p>
-              )}
+              <p className="help-text">
+                {selectedTemplate === "auto" ? t.autoDetectHelp : t.selectedTemplateHelp}
+              </p>
             </div>
 
             <div className="form-group">
