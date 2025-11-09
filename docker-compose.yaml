@@ -11,7 +11,13 @@ services:
       - PYTHONUNBUFFERED=1
       - EMBEDDING_MODEL=all-MiniLM-L6-v2
       - TEMPLATES_DIR=/app/templates
+<<<<<<< HEAD
       - GEMINI_MODEL=gemini-1.5-pro
+=======
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=models/gemini-2.0-flash
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
       # Database
       - POSTGRES_USER=radiology_user
       - POSTGRES_PASSWORD=secure_password

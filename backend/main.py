@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 from typing import List, Optional, Literal
+from pathlib import Path
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
@@ -21,10 +22,15 @@ from cache_service import cache
 from vector_service import vector_service
 from document_generator import DocumentGenerator, PDFConverter
 from ai_analysis_service import ai_analysis_service
+<<<<<<< HEAD
 from auth import get_current_active_user
 from routers import auth_router, users_router, reports_router, templates_router, suggestions_router, notifications_router, backup_router, voice_router, dicom_router
 from critical_findings_detector import critical_detector
 from notification_service import notification_service
+=======
+from auth import get_current_active_user, get_current_admin_user
+from routers import auth_router, users_router
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
 # Configure Gemini
 if not settings.GEMINI_API_KEY:
@@ -46,6 +52,7 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(users_router.router)
 
+<<<<<<< HEAD
 # Include new feature routers
 app.include_router(reports_router.router)
 app.include_router(templates_router.router)
@@ -54,18 +61,104 @@ app.include_router(notifications_router.router)
 app.include_router(backup_router.router)
 app.include_router(voice_router.router)
 app.include_router(dicom_router.router)
+=======
+# Store frontend path for later use (SPA routing will be added at the end)
+FRONTEND_DIST_PATH = Path(__file__).parent.parent / "frontend" / "dist"
+if FRONTEND_DIST_PATH.exists() and FRONTEND_DIST_PATH.is_dir():
+    print(f"✓ Serving frontend from: {FRONTEND_DIST_PATH}")
+    # Mount static assets (JS, CSS, images)
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST_PATH / "assets")), name="assets")
+else:
+    print(f"⚠ Frontend dist directory not found at: {FRONTEND_DIST_PATH}")
+    print("  Run 'cd frontend && npm run build' to build the frontend")
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
 # Create tables on startup
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and services on startup"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     print("=" * 60)
     print("Starting Radiology RAG Backend...")
     print("=" * 60)
 
+<<<<<<< HEAD
     # Create tables if they don't exist
     Base.metadata.create_all(bind=engine, checkfirst=True)
     print("✓ Database tables ready")
+=======
+    # Create tables if they don't exist with retry logic
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            Base.metadata.create_all(bind=engine)
+            print("✓ Database tables ready")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Database connection attempt {attempt + 1} failed: {e}. Retrying in {retry_delay}s...")
+                import time
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                logger.error(f"Failed to connect to database after {max_retries} attempts: {e}")
+                print(f"⚠ Database connection failed. Running in limited mode.")
+                print(f"⚠ Please check your DATABASE_URL configuration.")
+                return
+
+    # Run database migrations
+    try:
+        from migrate_db import migrate_add_language_column
+        from migrate_reports import migrate_add_user_id_to_reports
+        migrate_add_language_column()
+        migrate_add_user_id_to_reports()
+    except Exception as e:
+        logger.warning(f"Migration warning: {e}")
+        print(f"⚠ Migration note: {e}")
+
+    # Load templates from .docx files if database is empty
+    try:
+        from template_loader import load_templates_from_files, DEFAULT_TEMPLATES
+
+        db = next(get_db())
+        template_count = db.query(Template).count()
+
+        if template_count == 0:
+            print("\nLoading templates from files...")
+
+            # Try to load from .docx files
+            templates_data = load_templates_from_files()
+
+            # If no .docx files found, use default templates
+            if not templates_data:
+                print("⚠ No template files found, using default templates")
+                templates_data = DEFAULT_TEMPLATES
+
+            # Insert templates into database
+            for tpl_data in templates_data:
+                template = Template(**tpl_data)
+                db.add(template)
+
+            db.commit()
+            print(f"✓ Loaded {len(templates_data)} templates successfully")
+
+            # Print loaded templates
+            for tpl in templates_data:
+                print(f"  - {tpl['title']} ({tpl['category']})")
+        else:
+            print(f"✓ Found {template_count} existing templates in database")
+
+        db.close()
+    except Exception as e:
+        logger.error(f"Error loading templates: {e}")
+        print(f"⚠ Failed to load templates: {e}")
+        import traceback
+        traceback.print_exc()
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
     # Initialize services (already done in their constructors)
     print("✓ Cache service initialized")
@@ -106,6 +199,35 @@ class TemplateResponse(BaseModel):
     title: str
     keywords: List[str]
     category: Optional[str]
+
+class TemplateDetailResponse(BaseModel):
+    id: int
+    template_id: str
+    title: str
+    keywords: List[str]
+    skeleton: str
+    category: Optional[str]
+    language: Optional[str]
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+class TemplateCreateRequest(BaseModel):
+    template_id: str
+    title: str
+    keywords: List[str]
+    skeleton: str
+    category: Optional[str] = None
+    language: Optional[str] = 'fr'
+    is_active: bool = True
+
+class TemplateUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    keywords: Optional[List[str]] = None
+    skeleton: Optional[str] = None
+    category: Optional[str] = None
+    language: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class ReportHistoryResponse(BaseModel):
     id: int
@@ -158,8 +280,13 @@ def format_skeleton(skeleton: str, meta: Meta, indication: str) -> str:
     )
 
 # ---------- API Endpoints ----------
+<<<<<<< HEAD
 # Note: Root endpoint "/" is defined at the bottom of this file
 # to serve the frontend after static files are mounted
+=======
+# Note: Root path "/" is handled by SPA catch-all at end of file
+# Use /health for API health checks
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
 @app.get("/templates", response_model=List[TemplateResponse])
 async def list_templates(db: Session = Depends(get_db)):
@@ -175,6 +302,112 @@ async def list_templates(db: Session = Depends(get_db)):
         )
         for t in templates
     ]
+
+@app.get("/admin/templates", response_model=List[TemplateDetailResponse])
+async def list_all_templates(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Get all templates including inactive ones (admin only)"""
+    templates = db.query(Template).order_by(Template.created_at.desc()).all()
+    return templates
+
+@app.get("/templates/{template_id}", response_model=TemplateDetailResponse)
+async def get_template(
+    template_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Get template details by ID (admin only)"""
+    template = db.query(Template).filter(Template.template_id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return template
+
+@app.post("/admin/templates", response_model=TemplateDetailResponse, status_code=201)
+async def create_template(
+    template_data: TemplateCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Create a new template (admin only)"""
+    # Check if template_id already exists
+    existing = db.query(Template).filter(Template.template_id == template_data.template_id).first()
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Template with ID '{template_data.template_id}' already exists"
+        )
+
+    # Create new template
+    new_template = Template(
+        template_id=template_data.template_id,
+        title=template_data.title,
+        keywords=template_data.keywords,
+        skeleton=template_data.skeleton,
+        category=template_data.category,
+        language=template_data.language,
+        is_active=template_data.is_active,
+        created_at=datetime.now(),
+        updated_at=datetime.now()
+    )
+
+    db.add(new_template)
+    db.commit()
+    db.refresh(new_template)
+
+    return new_template
+
+@app.put("/admin/templates/{template_id}", response_model=TemplateDetailResponse)
+async def update_template(
+    template_id: str,
+    template_data: TemplateUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Update an existing template (admin only)"""
+    template = db.query(Template).filter(Template.template_id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Update fields if provided
+    if template_data.title is not None:
+        template.title = template_data.title
+    if template_data.keywords is not None:
+        template.keywords = template_data.keywords
+    if template_data.skeleton is not None:
+        template.skeleton = template_data.skeleton
+    if template_data.category is not None:
+        template.category = template_data.category
+    if template_data.language is not None:
+        template.language = template_data.language
+    if template_data.is_active is not None:
+        template.is_active = template_data.is_active
+
+    template.updated_at = datetime.now()
+
+    db.commit()
+    db.refresh(template)
+
+    return template
+
+@app.delete("/admin/templates/{template_id}", status_code=204)
+async def delete_template(
+    template_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Soft delete a template by marking it as inactive (admin only)"""
+    template = db.query(Template).filter(Template.template_id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    template.is_active = False
+    template.updated_at = datetime.now()
+
+    db.commit()
+
+    return None
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(
@@ -252,7 +485,18 @@ Accession/ID: {meta.accession}
         for i, case in enumerate(similar_cases, 1):
             user_prompt += f"\n{i}. {case['text'][:200]}... (similarity: {case['score']:.2f})\n"
 
+    # Determine language instruction based on template language
+    template_lang = getattr(template, 'language', 'fr')  # Default to French if not set
+    language_instructions = {
+        'fr': "IMPORTANT: Generate the ENTIRE report in FRENCH. All medical terminology and text must be in French.",
+        'en': "IMPORTANT: Generate the ENTIRE report in ENGLISH. All medical terminology and text must be in English.",
+        'ar': "IMPORTANT: Generate the ENTIRE report in ARABIC. All medical terminology and text must be in Arabic (right-to-left)."
+    }
+    lang_instruction = language_instructions.get(template_lang, language_instructions['fr'])
+
     user_prompt += f"""
+
+{lang_instruction}
 
 INSTRUCTIONS:
 You must produce a complete radiology report following the template below EXACTLY.
@@ -260,26 +504,62 @@ You must produce a complete radiology report following the template below EXACTL
 - Replace ALL <fill>, <à remplir>, and similar placeholders with appropriate clinical findings
 - Base your findings on the indication text above
 - Fill EVERY section - leave NO placeholders unfilled
-- Use professional medical terminology
+- Use professional medical terminology in {template_lang.upper()}
 - Output plain text only (no markdown, no code blocks, no backticks)
+- The report MUST be in the SAME LANGUAGE as the template ({template_lang.upper()})
 
 TEMPLATE TO FOLLOW:
 
 {formatted_skeleton}
 
-Now generate the COMPLETE report with all placeholders filled:
+Now generate the COMPLETE report with all placeholders filled IN {template_lang.upper()}:
 """.strip()
 
     # Call Gemini - combine system instructions with user prompt
     # Gemini doesn't support "system" role in messages
-    model = genai.GenerativeModel(
-        model_name=settings.GEMINI_MODEL,
-        system_instruction=SYSTEM_INSTRUCTIONS
-    )
-    resp = model.generate_content(user_prompt)
+    try:
+        model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            system_instruction=SYSTEM_INSTRUCTIONS
+        )
+        resp = model.generate_content(user_prompt)
 
-    # Extract text
-    report_text = (resp.text or "").strip()
+        # Extract text
+        report_text = (resp.text or "").strip()
+
+        if not report_text:
+            raise HTTPException(
+                status_code=500,
+                detail="Gemini API returned empty response. Please try again."
+            )
+    except HTTPException:
+        # Re-raise HTTPException without modification
+        raise
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Gemini API error: {error_msg}")
+
+        # Provide user-friendly error messages based on error type
+        if "API_KEY" in error_msg.upper() or "PERMISSION_DENIED" in error_msg:
+            raise HTTPException(
+                status_code=500,
+                detail="Invalid or missing Gemini API key. Please check your GEMINI_API_KEY in Replit Secrets."
+            )
+        elif "QUOTA" in error_msg.upper() or "RESOURCE_EXHAUSTED" in error_msg:
+            raise HTTPException(
+                status_code=429,
+                detail="Gemini API quota exceeded. Please try again later or upgrade your API plan."
+            )
+        elif "RATE_LIMIT" in error_msg.upper():
+            raise HTTPException(
+                status_code=429,
+                detail="Too many requests. Please wait a moment and try again."
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to generate report: {error_msg}"
+            )
 
     # Detect critical findings
     critical_results = critical_detector.detect_critical_findings(
@@ -355,7 +635,11 @@ Now generate the COMPLETE report with all placeholders filled:
     try:
         report = Report(
             template_id=template.id,
+<<<<<<< HEAD
             user_id=current_user.id,  # Track who created it
+=======
+            user_id=current_user.id,  # Track which user generated this report
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
             patient_name=meta.patient_name,
             accession=meta.accession,
             doctor_name=meta.doctorName,
@@ -364,9 +648,13 @@ Now generate the COMPLETE report with all placeholders filled:
             indication=req.input,
             generated_report=report_text,
             study_datetime=meta.study_datetime,
+<<<<<<< HEAD
             modality=modality,  # Add modality for filtering
             similar_cases_used=similar_cases,  # Store RAG context
             highlights=list(set(highlights))  # Store highlights
+=======
+            report_language=template_lang  # Save the report language from template
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
         )
         db.add(report)
         db.commit()
@@ -441,14 +729,18 @@ Now generate the COMPLETE report with all placeholders filled:
 
 @app.get("/reports/history", response_model=List[ReportHistoryResponse])
 async def get_report_history(
-    limit: int = 10,
-    db: Session = Depends(get_db)
+    limit: int = 50,
+    skip: int = 0,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Get report generation history"""
+    """Get report generation history for current user"""
     reports = (
         db.query(Report)
         .join(Template)
+        .filter(Report.user_id == current_user.id)  # Filter by current user
         .order_by(Report.created_at.desc())
+        .offset(skip)
         .limit(limit)
         .all()
     )
@@ -466,11 +758,18 @@ async def get_report_history(
     ]
 
 @app.get("/reports/{report_id}")
-async def get_report(report_id: int, db: Session = Depends(get_db)):
-    """Get a specific report by ID"""
-    report = db.query(Report).filter(Report.id == report_id).first()
+async def get_report(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get a specific report by ID (must be owned by current user)"""
+    report = db.query(Report).filter(
+        Report.id == report_id,
+        Report.user_id == current_user.id  # Ensure user owns this report
+    ).first()
     if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise HTTPException(status_code=404, detail="Report not found or access denied")
 
     return {
         "id": report.id,
@@ -489,7 +788,8 @@ async def get_report(report_id: int, db: Session = Depends(get_db)):
 async def download_report_word(
     report_id: int,
     highlight: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Download a report as Word document (.docx)
@@ -498,10 +798,13 @@ async def download_report_word(
         report_id: The report ID
         highlight: Whether to highlight AI-generated content (default: False)
     """
-    # Get report from database
-    report = db.query(Report).filter(Report.id == report_id).first()
+    # Get report from database (ensure user owns it)
+    report = db.query(Report).filter(
+        Report.id == report_id,
+        Report.user_id == current_user.id
+    ).first()
     if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise HTTPException(status_code=404, detail="Report not found or access denied")
 
     # Get template for formatting metadata
     template = report.template
@@ -537,7 +840,8 @@ async def download_report_word(
 @app.get("/reports/{report_id}/download/pdf")
 async def download_report_pdf(
     report_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     Download a report as PDF document
@@ -545,10 +849,13 @@ async def download_report_pdf(
     Args:
         report_id: The report ID
     """
-    # Get report from database
-    report = db.query(Report).filter(Report.id == report_id).first()
+    # Get report from database (ensure user owns it)
+    report = db.query(Report).filter(
+        Report.id == report_id,
+        Report.user_id == current_user.id
+    ).first()
     if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+        raise HTTPException(status_code=404, detail="Report not found or access denied")
 
     # Get template for formatting metadata
     template = report.template
@@ -742,6 +1049,7 @@ async def health_check():
         "gemini_model": settings.GEMINI_MODEL
     }
 
+<<<<<<< HEAD
 # Serve static frontend files (for production deployment)
 # Get the project root directory (parent of backend directory)
 backend_dir = Path(__file__).resolve().parent
@@ -799,3 +1107,29 @@ else:
             "health": "/health",
             "note": "Frontend not built. Deploy will build it automatically."
         }
+=======
+# ============================================================
+# SPA Frontend Routing - MUST BE LAST!
+# Catch-all route to serve frontend for all unmatched paths
+# ============================================================
+if FRONTEND_DIST_PATH.exists() and FRONTEND_DIST_PATH.is_dir():
+    index_path = FRONTEND_DIST_PATH / "index.html"
+
+    @app.get("/")
+    async def serve_root():
+        """Serve frontend SPA for root path"""
+        if index_path.exists():
+            return FileResponse(index_path)
+        raise HTTPException(status_code=404, detail="Frontend not found")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """
+        Serve frontend SPA for all unmatched routes.
+        This must be defined LAST so API routes are matched first.
+        """
+        # Serve index.html for SPA routing
+        if index_path.exists():
+            return FileResponse(index_path)
+        raise HTTPException(status_code=404, detail="Frontend not found")
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp

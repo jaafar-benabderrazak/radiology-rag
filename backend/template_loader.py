@@ -14,8 +14,28 @@ from docx.text.run import Run
 class TemplateLoader:
     """Loads radiology templates from Word documents"""
 
-    def __init__(self, templates_dir: str = "/app/templates"):
-        self.templates_dir = Path(templates_dir)
+    def __init__(self, templates_dir: Optional[str] = None):
+        # Try multiple possible locations for templates directory
+        if templates_dir:
+            self.templates_dir = Path(templates_dir)
+        else:
+            # Try different paths based on environment
+            possible_paths = [
+                Path("/app/templates"),  # Docker container
+                Path(__file__).parent.parent / "templates",  # Relative to backend folder
+                Path.cwd() / "templates",  # Current working directory
+                Path("/home/runner/workspace/templates"),  # Replit deployment
+            ]
+
+            for path in possible_paths:
+                if path.exists() and path.is_dir():
+                    self.templates_dir = path
+                    print(f"✓ Found templates directory: {path}")
+                    break
+            else:
+                # Default to relative path if none found
+                self.templates_dir = Path(__file__).parent.parent / "templates"
+                print(f"⚠ Using default templates path: {self.templates_dir}")
 
     def load_all_templates(self) -> List[Dict]:
         """Load all .docx templates from the templates directory"""
@@ -151,6 +171,10 @@ class TemplateLoader:
         # Detect category from filename or title
         category = self._detect_category(title, docx_path.stem)
 
+        # Detect language from template content (title + skeleton)
+        full_text = title + '\n' + skeleton
+        language = self._detect_language(full_text)
+
         # Store the formatting metadata as JSON string for database storage
         formatting_metadata = json.dumps(paragraphs_formatting)
 
@@ -160,6 +184,7 @@ class TemplateLoader:
             'keywords': keywords,
             'skeleton': skeleton,
             'category': category,
+            'language': language,
             'is_active': True,
             'formatting_metadata': formatting_metadata
         }
@@ -192,10 +217,62 @@ class TemplateLoader:
 
         return 'General'
 
+    def _detect_language(self, text: str) -> str:
+        """
+        Detect language from template text content
 
-def load_templates_from_files(templates_dir: str = "/app/templates") -> List[Dict]:
+        Uses simple keyword-based detection for French, English, Arabic, etc.
+        Returns ISO 639-1 language code: 'fr', 'en', 'ar', etc.
+        """
+        text_lower = text.lower()
+
+        # French indicators (common medical terms and section headers)
+        french_indicators = [
+            'échographie', 'irm', 'tomodensitométrie', 'radiographie',
+            'indication', 'technique', 'résultats', 'conclusion',
+            'synthèse', 'à remplir', 'données', 'examen', 'patient',
+            'médecin', 'hôpital', 'étude', 'corps', 'poumons',
+            'cœur', 'abdomen', 'cerveau', 'colonne', 'genou',
+            'cheville', 'épaule', 'rachis', 'biliaire', 'hépatique',
+            'mammaire', 'entéro', 'entier', 'cervical', 'lombaire'
+        ]
+
+        # English indicators
+        english_indicators = [
+            'indication', 'technique', 'findings', 'impression',
+            'conclusion', 'fill', 'patient', 'study', 'examination',
+            'physician', 'hospital', 'chest', 'abdomen', 'brain',
+            'spine', 'knee', 'ankle', 'shoulder', 'liver', 'kidney',
+            'unremarkable', 'normal', 'abnormal'
+        ]
+
+        # Arabic indicators
+        arabic_indicators = ['المريض', 'الفحص', 'النتائج', 'الاستنتاج', 'التقنية']
+
+        # Count occurrences
+        french_count = sum(1 for word in french_indicators if word in text_lower)
+        english_count = sum(1 for word in english_indicators if word in text_lower)
+        arabic_count = sum(1 for word in arabic_indicators if word in text_lower)
+
+        # Return language with highest count
+        if french_count > english_count and french_count > arabic_count:
+            return 'fr'
+        elif arabic_count > 0:
+            return 'ar'
+        elif english_count > 0:
+            return 'en'
+        else:
+            # Default to French for backward compatibility
+            return 'fr'
+
+
+def load_templates_from_files(templates_dir: Optional[str] = None) -> List[Dict]:
     """
     Convenience function to load all templates from directory
+
+    Args:
+        templates_dir: Optional path to templates directory. If not provided,
+                      will auto-detect based on environment.
 
     Returns:
         List of template dictionaries ready for database insertion
@@ -211,6 +288,7 @@ DEFAULT_TEMPLATES = [
         "title": "CT Pulmonary Angiography – Pulmonary Embolism",
         "keywords": ["ctpa", "pulmonary embolism", "pe", "angiography", "dyspnea"],
         "category": "CT",
+        "language": "en",
         "skeleton": """Radiology Report
 Referring Physician: {referrer}
 Reporting Radiologist: {doctor_name}
@@ -245,6 +323,7 @@ Signed electronically by {doctor_name}, {study_datetime}
         "title": "Chest X-ray – Normal",
         "keywords": ["cxr", "xray", "chest", "radiograph"],
         "category": "X-Ray",
+        "language": "en",
         "skeleton": """Radiology Report
 Referring Physician: {referrer}
 Reporting Radiologist: {doctor_name}

@@ -1,4 +1,5 @@
 const getApiBase = () => {
+<<<<<<< HEAD
   if (import.meta.env.VITE_API_BASE) {
     return import.meta.env.VITE_API_BASE
   }
@@ -11,10 +12,61 @@ const getApiBase = () => {
     const hostname = window.location.hostname
     return `${protocol}//${hostname}`
   }
+=======
+  console.log('[API Config] Detecting API base URL...')
+
+  // Priority 1: Environment variable
+  if (import.meta.env.VITE_API_BASE) {
+    console.log('[API Config] Using VITE_API_BASE:', import.meta.env.VITE_API_BASE)
+    return import.meta.env.VITE_API_BASE
+  }
+
+  // Priority 2: Runtime config (set by backend)
+  if (typeof window !== 'undefined' && (window as any).__API_BASE__) {
+    console.log('[API Config] Using window.__API_BASE__:', (window as any).__API_BASE__)
+    return (window as any).__API_BASE__
+  }
+
+  // Priority 3: Production environment detection
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    const protocol = window.location.protocol
+    const port = window.location.port
+
+    console.log('[API Config] Window location:', {
+      protocol,
+      hostname,
+      port,
+      origin: window.location.origin
+    })
+
+    // If not localhost, assume production deployment where frontend and backend are same origin
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      let apiBase: string
+
+      // For Replit and most deployments, use same origin
+      if (port && port !== '80' && port !== '443') {
+        apiBase = `${protocol}//${hostname}:${port}`
+      } else {
+        apiBase = `${protocol}//${hostname}`
+      }
+
+      console.log('[API Config] Production mode - Using same origin:', apiBase)
+      return apiBase
+    }
+  }
+
+  // Priority 4: Local development fallback
+  console.log('[API Config] Local development mode - Using localhost:8000')
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
   return 'http://localhost:8000'
 }
 
 const base = getApiBase()
+<<<<<<< HEAD
+=======
+console.log('[API Config] Final API base URL:', base)
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
 // Export base URL for components that need direct fetch calls
 export const API_BASE = base
@@ -52,6 +104,60 @@ export interface Template {
   title: string
   keywords: string[]
   category: string | null
+}
+
+export interface TemplateDetail {
+  id: number
+  template_id: string
+  title: string
+  keywords: string[]
+  skeleton: string
+  category: string | null
+  language: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string | null
+}
+
+export interface TemplateCreateRequest {
+  template_id: string
+  title: string
+  keywords: string[]
+  skeleton: string
+  category?: string | null
+  language?: string
+  is_active?: boolean
+}
+
+export interface TemplateUpdateRequest {
+  title?: string
+  keywords?: string[]
+  skeleton?: string
+  category?: string | null
+  language?: string
+  is_active?: boolean
+}
+
+export interface ReportHistory {
+  id: number
+  patient_name: string | null
+  accession: string | null
+  indication: string
+  template_title: string
+  created_at: string
+}
+
+export interface ReportDetail {
+  id: number
+  template_title: string
+  patient_name: string | null
+  accession: string | null
+  doctor_name: string | null
+  hospital_name: string | null
+  indication: string
+  generated_report: string
+  study_datetime: string | null
+  created_at: string
 }
 
 export interface GenerateRequest {
@@ -268,6 +374,7 @@ export function logout(): void {
   removeToken()
 }
 
+<<<<<<< HEAD
 // ===========================
 // Report History API
 // ===========================
@@ -563,5 +670,96 @@ export async function quickSuggest(findings: string, suggestionType: 'differenti
     body: JSON.stringify({ findings, suggestion_type: suggestionType })
   })
   if (!res.ok) throw new Error(await res.text())
+=======
+// Template Management API (Admin only)
+export async function fetchAllTemplates(): Promise<TemplateDetail[]> {
+  const res = await fetch(`${base}/admin/templates`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('Admin access required')
+    }
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function getTemplate(templateId: string): Promise<TemplateDetail> {
+  const res = await fetch(`${base}/templates/${templateId}`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('Admin access required')
+    }
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function createTemplate(templateData: TemplateCreateRequest): Promise<TemplateDetail> {
+  const res = await fetch(`${base}/admin/templates`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(templateData)
+  })
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('Admin access required')
+    }
+    const errorText = await res.text()
+    throw new Error(errorText || 'Failed to create template')
+  }
+  return res.json()
+}
+
+export async function updateTemplate(templateId: string, templateData: TemplateUpdateRequest): Promise<TemplateDetail> {
+  const res = await fetch(`${base}/admin/templates/${templateId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(templateData)
+  })
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('Admin access required')
+    }
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function deleteTemplate(templateId: string): Promise<void> {
+  const res = await fetch(`${base}/admin/templates/${templateId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error('Admin access required')
+    }
+    throw new Error(await res.text())
+  }
+}
+
+// Report History API
+export async function fetchReportHistory(limit: number = 50, skip: number = 0): Promise<ReportHistory[]> {
+  const res = await fetch(`${base}/reports/history?limit=${limit}&skip=${skip}`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+  return res.json()
+}
+
+export async function fetchReportDetail(reportId: number): Promise<ReportDetail> {
+  const res = await fetch(`${base}/reports/${reportId}`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    throw new Error(await res.text())
+  }
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
   return res.json()
 }

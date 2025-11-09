@@ -1,0 +1,41 @@
+# ULTRA-MINIMAL DEPLOYMENT REQUIREMENTS
+# For Replit Autoscale Deployment (<200MB total)
+# Excludes all optional services (Redis, Qdrant) - they should be external
+
+# FastAPI and server (REQUIRED)
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Data models and validation (REQUIRED)
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# Document processing (REQUIRED for templates)
+python-docx==1.1.0
+
+# Database support (REQUIRED)
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# Authentication and Security (REQUIRED)
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+
+# Async support (REQUIRED)
+aiofiles==23.2.1
+
+# Google Gemini AI (REQUIRED for report generation)
+google-generativeai==0.8.3
+protobuf<5
+
+# Email validation (REQUIRED)
+email-validator>=2.0.0
+
+# EXCLUDED from deployment:
+# - redis (use external Redis service if needed)
+# - qdrant-client (use external Qdrant service if needed)
+# - alembic (database migrations done separately)
+# - torch, sentence-transformers (too heavy, use external APIs)
+# - openai-whisper (too heavy, use OpenAI Whisper API)

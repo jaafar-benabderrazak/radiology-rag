@@ -1,0 +1,55 @@
+# MINIMAL DEPLOYMENT REQUIREMENTS (< 500MB)
+# This file includes only essential dependencies for Cloud Run deployment
+# Heavy ML libraries (torch, sentence-transformers) are excluded
+
+# FastAPI and server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Data models and validation
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# Document processing (REQUIRED for templates)
+python-docx==1.1.0
+
+# Database support
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1
+
+# Authentication and Security (REQUIRED)
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+
+# Caching (lightweight, gracefully disabled if unavailable)
+redis==5.0.1
+
+# Async support
+aiofiles==23.2.1
+
+# Google Gemini AI (REQUIRED for report generation)
+google-generativeai==0.8.3
+protobuf<5
+
+# Email validation
+email-validator>=2.0.0
+
+# EXCLUDED HEAVY DEPENDENCIES (Optional features):
+# - torch>=2.0.0 (~2GB) - Only needed for vector embeddings
+# - sentence-transformers - Only needed for semantic search
+# - transformers - Only needed for advanced NLP
+# - qdrant-client - Only needed for vector database
+# - spacy - Only needed for advanced NLP
+# - openai-whisper - Only needed for server-side transcription (we use browser speech API)
+#
+# These features are disabled but the app remains fully functional:
+# ✅ Report generation (Gemini API)
+# ✅ Template matching (keyword-based)
+# ✅ Authentication (JWT)
+# ✅ Document export (Word/PDF)
+# ✅ Database (SQLite/PostgreSQL)
+# ❌ Semantic search (vector embeddings)
+# ❌ Server-side voice transcription (browser speech API still works)

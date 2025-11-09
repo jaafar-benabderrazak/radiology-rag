@@ -1,0 +1,7 @@
+# Root requirements file for Replit deployment
+# This signals to Replit's deployment system to use pip instead of uv
+#
+# Uses ultra-minimal dependencies for deployment (<200MB)
+# Excludes Redis, Qdrant - these should be external services
+
+-r backend/requirements-deploy.txt

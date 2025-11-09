@@ -3,21 +3,45 @@ from typing import List, Optional, Dict, Any
 from config import settings
 import uuid
 
+<<<<<<< HEAD
 # Try to import optional dependencies
+=======
+# Conditional import for Qdrant
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 try:
     from qdrant_client import QdrantClient
     from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
     QDRANT_AVAILABLE = True
 except ImportError:
+<<<<<<< HEAD
     QDRANT_AVAILABLE = False
     print("⚠ Qdrant client not available")
 
+=======
+    print("⚠ qdrant-client not available - vector search will be disabled")
+    QDRANT_AVAILABLE = False
+    QdrantClient = None
+    Distance = None
+    VectorParams = None
+    PointStruct = None
+    Filter = None
+    FieldCondition = None
+    MatchValue = None
+
+# Conditional import for SentenceTransformers
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 try:
     from sentence_transformers import SentenceTransformer
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
+<<<<<<< HEAD
     SENTENCE_TRANSFORMERS_AVAILABLE = False
     print("⚠ sentence-transformers not available")
+=======
+    print("⚠ sentence-transformers not available")
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+    SentenceTransformer = None
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
 class VectorService:
     def __init__(self):
@@ -31,24 +55,34 @@ class VectorService:
             print(f"⚠ Vector service disabled: Qdrant={QDRANT_AVAILABLE}, SentenceTransformers={SENTENCE_TRANSFORMERS_AVAILABLE}")
             return
 
+        if not QDRANT_AVAILABLE:
+            self.client = None
+            self.embedding_model = None
+            print("⚠ Vector service disabled: qdrant-client not installed")
+            return
+
         try:
-            # Initialize Qdrant client
+            # Initialize Qdrant client with short timeout for Cloud Run deployment
             self.client = QdrantClient(
                 host=settings.QDRANT_HOST,
                 port=settings.QDRANT_PORT,
-                timeout=10
+                timeout=1.0  # Fail fast - reduced from 10s
             )
 
             # Initialize embedding model
-            print(f"Loading embedding model: {self.embedding_model_name}...")
-            self.embedding_model = SentenceTransformer(self.embedding_model_name)
+            if SENTENCE_TRANSFORMERS_AVAILABLE:
+                print(f"Loading embedding model: {self.embedding_model_name}...")
+                self.embedding_model = SentenceTransformer(self.embedding_model_name)
+            else:
+                print(f"⚠ Vector service disabled: Qdrant=True, SentenceTransformers=False")
+                self.embedding_model = None
 
-            # Create collection if it doesn't exist
+            # Create collection if it doesn't exist (with timeout protection)
             self._ensure_collection()
 
             print(f"✓ Qdrant connected: {settings.QDRANT_HOST}:{settings.QDRANT_PORT}")
         except Exception as e:
-            print(f"⚠ Qdrant initialization failed: {e}")
+            print(f"⚠ Qdrant unavailable ({type(e).__name__}). Vector search disabled.")
             self.client = None
             self.embedding_model = None
 

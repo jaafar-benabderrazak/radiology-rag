@@ -1,23 +1,22 @@
 FROM python:3.11-slim
 
-# System deps (curl for healthcheck, build tools, and LibreOffice for PDF conversion)
+# CRITICAL: Minimal system dependencies only!
+# Removed LibreOffice (saves ~500MB), removed git (not needed in production)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl build-essential git libreoffice-writer libreoffice-core && \
-    rm -rf /var/lib/apt/lists/*
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /app/backend
 
-# Install deps first (better layer caching)
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Install MINIMAL Python dependencies (requirements-minimal.txt, NOT requirements.txt!)
+COPY requirements-minimal.txt /app/backend/requirements-minimal.txt
+RUN pip install --no-cache-dir -r requirements-minimal.txt
 
-# Copy app
-COPY . /app
+# Copy only backend code (not entire repo!)
+COPY . /app/backend
 
-# Optional: download small spaCy model at build time (uncomment if needed)
-# RUN python -m spacy download en_core_web_sm
+# Expose port 5000 for Replit autoscale deployment
+EXPOSE 5000
 
-EXPOSE 8000
-
-# Direct command to avoid Windows line ending issues with startup.sh
-CMD ["sh", "-c", "sleep 10 && python init_db.py && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]
+# Start uvicorn on port 5000 (Replit requirement)
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]

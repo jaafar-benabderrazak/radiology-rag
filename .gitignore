@@ -11,6 +11,10 @@ downloads/
 eggs/
 .eggs/
 lib/
+<<<<<<< HEAD
+=======
+!frontend/src/lib/
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 lib64/
 parts/
 sdist/
@@ -46,7 +50,10 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+<<<<<<< HEAD
 package-lock.json
+=======
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
 
 # Build outputs
 frontend/dist/
@@ -92,3 +99,12 @@ Desktop.ini
 *.temp
 *.bak
 *.swp
+<<<<<<< HEAD
+=======
+
+# Backend runtime directories
+backend/backups/
+backend/cache/
+backend/dicom_storage/
+backend/uploads/
+>>>>>>> claude/admin-template-management-011CUtvK2niZyDKTAoaDcdRp
