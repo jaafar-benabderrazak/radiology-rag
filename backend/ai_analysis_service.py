@@ -3,9 +3,17 @@ AI Analysis Service - Handles summary generation and inconsistency detection
 """
 import re
 from typing import Dict, List, Optional, Tuple
-import google.generativeai as genai
 
-from config import settings
+# Import will be done lazily to avoid circular dependency
+_llm_service = None
+
+def get_llm_service():
+    """Lazy import of LLM service to avoid circular dependency"""
+    global _llm_service
+    if _llm_service is None:
+        from llm_service import llm_service
+        _llm_service = llm_service
+    return _llm_service
 
 
 class AIAnalysisService:
@@ -13,7 +21,7 @@ class AIAnalysisService:
 
     def __init__(self):
         """Initialize the AI analysis service"""
-        self.model_name = settings.GEMINI_MODEL
+        pass
 
     def _detect_language(self, text: str) -> str:
         """
@@ -132,12 +140,11 @@ Generate the response:
 """.strip()
 
         try:
-            model = genai.GenerativeModel(
-                model_name=self.model_name,
-                system_instruction=system_instruction
+            llm = get_llm_service()
+            full_response = llm.generate_content(
+                system_instruction=system_instruction,
+                user_prompt=user_prompt
             )
-            response = model.generate_content(user_prompt)
-            full_response = response.text.strip()
 
             # Split response into summary and conclusion
             paragraphs = [p.strip() for p in full_response.split('\n\n') if p.strip()]
@@ -255,12 +262,11 @@ Be specific and reference the conflicting statements.
 """.strip()
 
         try:
-            model = genai.GenerativeModel(
-                model_name=self.model_name,
-                system_instruction=system_instruction
+            llm = get_llm_service()
+            analysis = llm.generate_content(
+                system_instruction=system_instruction,
+                user_prompt=user_prompt
             )
-            response = model.generate_content(user_prompt)
-            analysis = response.text.strip()
 
             # Parse the AI response
             parsed_results = self._parse_validation_response(analysis)

@@ -23,9 +23,20 @@ class Settings(BaseSettings):
     QDRANT_PORT: int = int(os.getenv("QDRANT_PORT", "6333"))
     QDRANT_COLLECTION: str = os.getenv("QDRANT_COLLECTION", "radiology_reports")
 
-    # API Keys
+    # API Keys - Primary LLM (Gemini)
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+
+    # Fallback LLM Providers
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
+
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    ANTHROPIC_MODEL: str = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+
+    # LLM Fallback Order (comma-separated): gemini,openai,anthropic
+    LLM_FALLBACK_ORDER: str = os.getenv("LLM_FALLBACK_ORDER", "gemini,openai,anthropic")
+    LLM_MAX_RETRIES: int = int(os.getenv("LLM_MAX_RETRIES", "3"))
 
     # Authentication
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-CHANGE-THIS-IN-PRODUCTION-use-openssl-rand-hex-32")

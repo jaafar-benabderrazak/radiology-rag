@@ -8,9 +8,6 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-# Google Generative AI
-import google.generativeai as genai
-
 # Local imports
 from config import settings
 from database import get_db, Base, engine
@@ -21,12 +18,12 @@ from document_generator import DocumentGenerator, PDFConverter
 from ai_analysis_service import ai_analysis_service
 import auth_routes
 from auth import get_optional_user
+from llm_service import llm_service
 
-# Configure Gemini
-if not settings.GEMINI_API_KEY:
-    raise RuntimeError("Set GEMINI_API_KEY (or GOOGLE_API_KEY) in environment/.env")
-
-genai.configure(api_key=settings.GEMINI_API_KEY)
+# Check if at least one LLM is configured
+if not (settings.GEMINI_API_KEY or settings.OPENAI_API_KEY or settings.ANTHROPIC_API_KEY):
+    print("⚠️ WARNING: No LLM API key configured! Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY")
+    print("⚠️ The application will not be able to generate reports.")
 
 # --- FastAPI app with CORS ---
 app = FastAPI(title="Radiology RAG API", version="1.0.0")
@@ -256,16 +253,19 @@ TEMPLATE TO FOLLOW:
 Now generate the COMPLETE report with all placeholders filled:
 """.strip()
 
-    # Call Gemini - combine system instructions with user prompt
-    # Gemini doesn't support "system" role in messages
-    model = genai.GenerativeModel(
-        model_name=settings.GEMINI_MODEL,
-        system_instruction=SYSTEM_INSTRUCTIONS
-    )
-    resp = model.generate_content(user_prompt)
-
-    # Extract text
-    report_text = (resp.text or "").strip()
+    # Call LLM with automatic fallback
+    try:
+        report_text = llm_service.generate_content(
+            system_instruction=SYSTEM_INSTRUCTIONS,
+            user_prompt=user_prompt
+        )
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ All LLM providers failed: {error_msg}")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Unable to generate report. All LLM providers failed. {error_msg}"
+        )
 
     # Generate highlights - extract key phrases from IMPRESSION/CONCLUSION section
     highlights: List[str] = []
