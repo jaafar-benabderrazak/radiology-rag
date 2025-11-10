@@ -5,3 +5,4 @@
 # Excludes Redis, Qdrant - these should be external services
 
 -r backend/requirements-deploy.txt
+psycopg2-binary

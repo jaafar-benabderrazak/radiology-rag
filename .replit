@@ -4,9 +4,11 @@
 run = "bash start-replit.sh"
 entrypoint = "backend/main.py"
 language = "python3"
+modules = ["python-3.11"]
 
 [nix]
 channel = "stable-23_11"
+packages = ["libxcrypt"]
 
 [deployment]
 run = ["bash", "start-replit.sh"]
@@ -24,6 +26,10 @@ externalPort = 80
 [[ports]]
 localPort = 8000
 externalPort = 8000
+
+[[ports]]
+localPort = 33509
+externalPort = 3000
 
 [languages.python3]
 pattern = "**/*.py"

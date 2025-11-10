@@ -52,7 +52,8 @@ def create_db_engine():
                 pool_timeout=30,              # Wait 30s for a connection from pool
                 connect_args={
                     "connect_timeout": 10,
-                    "options": "-c statement_timeout=30000"
+                    "options": "-c statement_timeout=30000",
+                    "gssencmode": "disable"   # Disable GSS encryption for better compatibility
                 }
             )
     else:
